@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RE Deadline Tracker</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ NAVBAR ═══ -->
+<nav class="navbar navbar-dark sticky-top">
+  <div class="container-fluid px-4">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="#" onclick="showDashboard()">
+      <i class="fa-solid fa-house-chimney-crack"></i>
+      <span class="fw-bold">RE Deadline Tracker</span>
+    </a>
+    <div class="d-flex align-items-center gap-3">
+      <span id="alertBell" class="alert-bell d-none" onclick="scrollToAlerts()" title="View urgent items">
+        <i class="fa-solid fa-bell fa-shake"></i>
+        <span id="alertBellCount" class="badge bg-danger">0</span>
+      </span>
+      <button class="btn btn-outline-light btn-sm" onclick="openTransactionModal()">
+        <i class="fa-solid fa-plus"></i> New Transaction
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════ DASHBOARD VIEW ═══ -->
+<div id="dashboardView" class="container-fluid px-4 py-4">
+
+  <!-- Stats row -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="stat-card">
+        <div class="stat-icon bg-primary-soft"><i class="fa-solid fa-file-contract text-primary"></i></div>
+        <div>
+          <div class="stat-label">Active Deals</div>
+          <div id="statActive" class="stat-value">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-danger">
+        <div class="stat-icon bg-danger-soft"><i class="fa-solid fa-circle-exclamation text-danger"></i></div>
+        <div>
+          <div class="stat-label">Overdue</div>
+          <div id="statOverdue" class="stat-value text-danger">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-warning">
+        <div class="stat-icon bg-warning-soft"><i class="fa-solid fa-calendar-day text-warning"></i></div>
+        <div>
+          <div class="stat-label">Due Today</div>
+          <div id="statToday" class="stat-value text-warning">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="stat-card stat-info">
+        <div class="stat-icon bg-info-soft"><i class="fa-solid fa-calendar-week text-info"></i></div>
+        <div>
+          <div class="stat-label">Due This Week</div>
+          <div id="statWeek" class="stat-value text-info">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert banners -->
+  <div id="alertsSection"></div>
+
+  <!-- Filters + search -->
+  <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <div class="input-group input-group-sm" style="max-width:260px">
+      <span class="input-group-text"><i class="fa-solid fa-magnifying-glass"></i></span>
+      <input type="text" id="searchInput" class="form-control" placeholder="Search address, client, MLS…" oninput="filterTransactions()" />
+    </div>
+    <div class="btn-group btn-group-sm" role="group">
+      <input type="radio" class="btn-check" name="statusFilter" id="filterAll"     value=""                checked onchange="filterTransactions()" />
+      <label class="btn btn-outline-secondary" for="filterAll">All</label>
+      <input type="radio" class="btn-check" name="statusFilter" id="filterActive"  value="active"          onchange="filterTransactions()" />
+      <label class="btn btn-outline-secondary" for="filterActive">Active</label>
+      <input type="radio" class="btn-check" name="statusFilter" id="filterContract" value="under_contract" onchange="filterTransactions()" />
+      <label class="btn btn-outline-secondary" for="filterContract">Under Contract</label>
+      <input type="radio" class="btn-check" name="statusFilter" id="filterClosed"  value="closed"          onchange="filterTransactions()" />
+      <label class="btn btn-outline-secondary" for="filterClosed">Closed</label>
+    </div>
+    <span id="txCount" class="text-muted small ms-auto"></span>
+  </div>
+
+  <!-- Transactions grid -->
+  <div id="transactionGrid" class="row g-3"></div>
+  <div id="emptyState" class="empty-state d-none">
+    <i class="fa-solid fa-house-circle-xmark"></i>
+    <h5>No transactions found</h5>
+    <p class="text-muted">Add your first transaction to get started.</p>
+    <button class="btn btn-primary" onclick="openTransactionModal()">
+      <i class="fa-solid fa-plus"></i> Add Transaction
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ TRANSACTION DETAIL VIEW ═══ -->
+<div id="transactionView" class="d-none container-fluid px-4 py-4">
+
+  <!-- Back + actions -->
+  <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <button class="btn btn-sm btn-outline-secondary" onclick="showDashboard()">
+      <i class="fa-solid fa-arrow-left"></i> Dashboard
+    </button>
+    <h4 id="txViewTitle" class="mb-0 fw-bold flex-grow-1"></h4>
+    <button class="btn btn-sm btn-outline-primary" onclick="openTemplateModal()">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Apply Template
+    </button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="editCurrentTransaction()">
+      <i class="fa-solid fa-pen"></i> Edit
+    </button>
+    <button class="btn btn-sm btn-outline-danger" onclick="deleteCurrentTransaction()">
+      <i class="fa-solid fa-trash"></i>
+    </button>
+  </div>
+
+  <!-- Transaction info card -->
+  <div id="txInfoCard" class="tx-info-card mb-4"></div>
+
+  <!-- Deadline controls -->
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <h5 class="mb-0 fw-semibold"><i class="fa-regular fa-clock me-2 text-muted"></i>Deadlines &amp; Tasks</h5>
+    <div class="btn-group btn-group-sm ms-2">
+      <input type="radio" class="btn-check" name="dlFilter" id="dlAll"     value="all"     checked onchange="renderDeadlines()" />
+      <label class="btn btn-outline-secondary btn-xs" for="dlAll">All</label>
+      <input type="radio" class="btn-check" name="dlFilter" id="dlPending" value="pending" onchange="renderDeadlines()" />
+      <label class="btn btn-outline-secondary btn-xs" for="dlPending">Pending</label>
+      <input type="radio" class="btn-check" name="dlFilter" id="dlDone"    value="done"    onchange="renderDeadlines()" />
+      <label class="btn btn-outline-secondary btn-xs" for="dlDone">Done</label>
+    </div>
+    <button class="btn btn-sm btn-primary ms-auto" onclick="openDeadlineModal()">
+      <i class="fa-solid fa-plus"></i> Add Deadline
+    </button>
+  </div>
+
+  <!-- Deadline list -->
+  <div id="deadlineList"></div>
+  <div id="deadlineEmpty" class="empty-state d-none">
+    <i class="fa-regular fa-calendar-xmark"></i>
+    <h5>No deadlines yet</h5>
+    <p class="text-muted">Add deadlines manually or apply a template.</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════ TRANSACTION MODAL ═══ -->
+<div class="modal fade" id="transactionModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-file-contract me-2"></i><span id="txModalTitle">New Transaction</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="txId" />
+        <div class="row g-3">
+          <!-- Property -->
+          <div class="col-12"><h6 class="form-section-title">Property</h6></div>
+          <div class="col-12">
+            <label class="form-label">Street Address <span class="text-danger">*</span></label>
+            <input type="text" id="txAddress" class="form-control" placeholder="123 Main St" required />
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">City</label>
+            <input type="text" id="txCity" class="form-control" placeholder="Austin" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">State</label>
+            <input type="text" id="txState" class="form-control" placeholder="TX" maxlength="2" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Zip</label>
+            <input type="text" id="txZip" class="form-control" placeholder="78701" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">MLS #</label>
+            <input type="text" id="txMls" class="form-control" placeholder="1234567" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Purchase Price</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" id="txPrice" class="form-control" placeholder="425000" />
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="col-12"><h6 class="form-section-title">Status &amp; Dates</h6></div>
+          <div class="col-md-4">
+            <label class="form-label">Transaction Type</label>
+            <select id="txType" class="form-select">
+              <option value="buyer">Buyer Representation</option>
+              <option value="seller">Seller / Listing</option>
+              <option value="both">Both Sides</option>
+              <option value="lease">Lease</option>
+              <option value="refinance">Refinance</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Status</label>
+            <select id="txStatus" class="form-select">
+              <option value="active">Active / Listing</option>
+              <option value="under_contract">Under Contract</option>
+              <option value="closed">Closed</option>
+              <option value="canceled">Canceled</option>
+              <option value="fallen_through">Fallen Through</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Contract Date</label>
+            <input type="date" id="txContractDate" class="form-control" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Closing Date</label>
+            <input type="date" id="txClosingDate" class="form-control" />
+          </div>
+
+          <!-- Client -->
+          <div class="col-12"><h6 class="form-section-title">Client</h6></div>
+          <div class="col-md-4">
+            <label class="form-label">Client Name</label>
+            <input type="text" id="txClientName" class="form-control" placeholder="Jane Smith" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Phone</label>
+            <input type="tel" id="txClientPhone" class="form-control" placeholder="(512) 555-1234" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <input type="email" id="txClientEmail" class="form-control" placeholder="jane@email.com" />
+          </div>
+
+          <!-- Team -->
+          <div class="col-12"><h6 class="form-section-title">Team &amp; Contacts</h6></div>
+          <div class="col-md-6">
+            <label class="form-label">Agent Name</label>
+            <input type="text" id="txAgentName" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Co-Agent</label>
+            <input type="text" id="txCoAgent" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Lender</label>
+            <input type="text" id="txLenderName" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Lender Phone</label>
+            <input type="tel" id="txLenderPhone" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Title Company</label>
+            <input type="text" id="txTitleCompany" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Title Contact</label>
+            <input type="text" id="txTitleContact" class="form-control" />
+          </div>
+
+          <!-- Template (new only) -->
+          <div id="templateSection" class="col-12">
+            <h6 class="form-section-title">Deadline Template <span class="text-muted fw-normal">(optional)</span></h6>
+            <select id="txTemplate" class="form-select">
+              <option value="">— None (add deadlines manually) —</option>
+            </select>
+            <div class="form-text">Automatically populate common deadlines based on contract date.</div>
+          </div>
+
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea id="txNotes" class="form-control" rows="3" placeholder="Any additional notes…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTransaction()">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Save Transaction
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ DEADLINE MODAL ═══ -->
+<div class="modal fade" id="deadlineModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-regular fa-clock me-2"></i><span id="dlModalTitle">Add Deadline</span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="dlId" />
+        <input type="hidden" id="dlTransactionId" />
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label">Title <span class="text-danger">*</span></label>
+            <input type="text" id="dlTitle" class="form-control" placeholder="e.g. Inspection Objection Deadline" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Due Date <span class="text-danger">*</span></label>
+            <input type="date" id="dlDueDate" class="form-control" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Due Time</label>
+            <input type="time" id="dlDueTime" class="form-control" value="17:00" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Category</label>
+            <select id="dlCategory" class="form-select">
+              <option value="earnest_money">Earnest Money</option>
+              <option value="inspection">Inspection / Option</option>
+              <option value="financing">Financing / Loan</option>
+              <option value="appraisal">Appraisal</option>
+              <option value="title">Title</option>
+              <option value="hoa">HOA</option>
+              <option value="survey">Survey</option>
+              <option value="insurance">Insurance</option>
+              <option value="walkthrough">Final Walkthrough</option>
+              <option value="closing">Closing / Settlement</option>
+              <option value="disclosure">Disclosures</option>
+              <option value="custom" selected>Custom / Other</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Priority</label>
+            <select id="dlPriority" class="form-select">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Status</label>
+            <select id="dlStatus" class="form-select">
+              <option value="pending">Pending</option>
+              <option value="completed">Completed</option>
+              <option value="expired">Expired</option>
+              <option value="waived">Waived</option>
+              <option value="canceled">Canceled</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea id="dlDescription" class="form-control" rows="2" placeholder="Details about this deadline…"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Notes</label>
+            <textarea id="dlNotes" class="form-control" rows="2" placeholder="Internal notes, action items…"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="saveDeadline()">
+          <i class="fa-solid fa-floppy-disk me-1"></i> Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ TEMPLATE MODAL ═══ -->
+<div class="modal fade" id="templateModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>Apply Deadline Template</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info small"><i class="fa-solid fa-circle-info me-1"></i>
+          This will <strong>add</strong> template deadlines to the existing list. It will not remove existing deadlines.
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Template</label>
+          <select id="tplSelect" class="form-select" onchange="updateTemplateInfo()"></select>
+        </div>
+        <div id="tplInfo" class="small text-muted"></div>
+        <div class="mb-3 mt-3">
+          <label class="form-label fw-semibold">Base Date (Contract Date)</label>
+          <input type="date" id="tplContractDate" class="form-control" />
+          <div class="form-text">All deadlines will be calculated relative to this date.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" onclick="applyTemplate()">
+          <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Apply Template
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ CONFIRM MODAL ═══ -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Confirm</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage"></p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm btn-danger" id="confirmBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="appToast" class="toast align-items-center border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toastMsg"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
