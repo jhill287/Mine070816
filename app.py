@@ -110,6 +110,36 @@ def init_db():
         );
     ''')
     conn.commit()
+
+    # ── Schema migrations: add new columns to existing databases ──
+    new_tx_cols = [
+        ('mec_date',          'TEXT'),
+        ('possession_date',   'TEXT'),
+        ('earnest_money',     'REAL'),
+        ('lender_email',      'TEXT'),
+        ('title_phone',       'TEXT'),
+        ('other_agent_name',  'TEXT'),
+        ('other_agent_phone', 'TEXT'),
+        ('tc_name',           'TEXT'),
+        ('tc_email',          'TEXT'),
+        ('hoa_name',          'TEXT'),
+    ]
+    existing_tx_cols = {row[1] for row in conn.execute("PRAGMA table_info(transactions)").fetchall()}
+    for col, coltype in new_tx_cols:
+        if col not in existing_tx_cols:
+            conn.execute(f"ALTER TABLE transactions ADD COLUMN {col} {coltype}")
+
+    new_dl_cols = [('cbs_key', 'TEXT')]
+    existing_dl_cols = {row[1] for row in conn.execute("PRAGMA table_info(deadlines)").fetchall()}
+    for col, coltype in new_dl_cols:
+        if col not in existing_dl_cols:
+            conn.execute(f"ALTER TABLE deadlines ADD COLUMN {col} {coltype}")
+
+    # Rename contract_date -> mec_date if old schema still has it
+    if 'contract_date' in existing_tx_cols and 'mec_date' in existing_tx_cols:
+        conn.execute("UPDATE transactions SET mec_date = contract_date WHERE mec_date IS NULL AND contract_date IS NOT NULL")
+
+    conn.commit()
     conn.close()
 
 
@@ -899,7 +929,7 @@ def _apply_template(conn, tid, key, mec_date):
             INSERT INTO deadlines
               (transaction_id, cbs_key, title, description, due_date, due_time,
                status, category, priority)
-            VALUES (?,?,?,?,'17:00','pending',?,?)
+            VALUES (?,?,?,?,?,'17:00','pending',?,?)
         ''', (tid, item['key'], item['title'], item.get('description', ''),
               due, item['category'], item['priority']))
     return len(tpl['deadlines'])
