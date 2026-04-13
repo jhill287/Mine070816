@@ -35,12 +35,14 @@ body {
 }
 .navbar-brand i { color: #E31837; }
 .navbar-logo {
-  height: 38px;
+  height: 40px;
   width: auto;
+  max-width: 160px;
   background: #fff;
   border-radius: 6px;
-  padding: 3px 7px;
+  padding: 4px 8px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 .navbar-subtitle {
   font-size: .72rem;
