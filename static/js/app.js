@@ -3,13 +3,15 @@
 // ─────────────────────────────────────────────── State ───
 const S = {
   transactions: [],
-  currentTx: null,   // full transaction object with deadlines
+  currentTx: null,
   templates: {},
+  cbsDefinitions: [],
 };
 
 // ─────────────────────────────────────────────── Boot ───
 document.addEventListener('DOMContentLoaded', () => {
   loadTemplates();
+  loadCBSDefs();
   showDashboard();
 });
 
@@ -32,6 +34,7 @@ async function api(method, path, body) {
 function showDashboard() {
   document.getElementById('dashboardView').classList.remove('d-none');
   document.getElementById('transactionView').classList.add('d-none');
+  document.getElementById('reportsView').classList.add('d-none');
   loadDashboard();
   loadTransactions();
 }
@@ -40,7 +43,15 @@ function showTransaction(tx) {
   S.currentTx = tx;
   document.getElementById('dashboardView').classList.add('d-none');
   document.getElementById('transactionView').classList.remove('d-none');
+  document.getElementById('reportsView').classList.add('d-none');
   renderTransactionDetail();
+}
+
+function showReports() {
+  document.getElementById('dashboardView').classList.add('d-none');
+  document.getElementById('transactionView').classList.add('d-none');
+  document.getElementById('reportsView').classList.remove('d-none');
+  loadReports();
 }
 
 // ─────────────────────────────────────────────── Dashboard ───
@@ -219,23 +230,33 @@ function renderTransactionDetail() {
 
   // Info card
   const price = tx.purchase_price ? `$${Number(tx.purchase_price).toLocaleString()}` : '—';
+  const em    = tx.earnest_money  ? `$${Number(tx.earnest_money).toLocaleString()}`  : null;
   const rows = [
-    ['Type',         txTypeLabel(tx.type)],
-    ['Status',       `<span class="badge ${txStatusClass(tx.status)}">${txStatusLabel(tx.status)}</span>`],
-    ['Price',        price],
-    ['MLS #',        tx.mls_number || '—'],
-    ['Contract',     tx.contract_date ? formatDate(tx.contract_date) : '—'],
-    ['Closing',      tx.closing_date  ? `<strong>${formatDate(tx.closing_date)}</strong>` : '—'],
-    ['Client',       tx.client_name  || '—'],
-    ['Client Phone', tx.client_phone  ? `<a href="tel:${tx.client_phone}">${esc(tx.client_phone)}</a>` : '—'],
-    ['Client Email', tx.client_email  ? `<a href="mailto:${tx.client_email}">${esc(tx.client_email)}</a>` : '—'],
-    ['Agent',        tx.agent_name   || '—'],
-    ['Co-Agent',     tx.co_agent     || '—'],
-    ['Lender',       tx.lender_name  || '—'],
-    ['Lender Phone', tx.lender_phone  ? `<a href="tel:${tx.lender_phone}">${esc(tx.lender_phone)}</a>` : '—'],
-    ['Title Co.',    tx.title_company || '—'],
-    ['Title Contact',tx.title_contact || '—'],
-  ].filter(([, v]) => v !== '—' || true);
+    ['Type',          txTypeLabel(tx.type)],
+    ['Status',        `<span class="badge ${txStatusClass(tx.status)}">${txStatusLabel(tx.status)}</span>`],
+    ['Price',         price],
+    ['Earnest Money', em],
+    ['MLS #',         tx.mls_number || null],
+    ['MEC Date',      tx.mec_date      ? formatDate(tx.mec_date)      : null],
+    ['Closing Date',  tx.closing_date  ? `<strong>${formatDate(tx.closing_date)}</strong>` : null],
+    ['Possession',    tx.possession_date ? formatDate(tx.possession_date) : null],
+    ['Client',        tx.client_name   || null],
+    ['Client Phone',  tx.client_phone  ? `<a href="tel:${tx.client_phone}">${esc(tx.client_phone)}</a>` : null],
+    ['Client Email',  tx.client_email  ? `<a href="mailto:${tx.client_email}">${esc(tx.client_email)}</a>` : null],
+    ['Agent',         tx.agent_name    || null],
+    ['Co-Agent',      tx.co_agent      || null],
+    ['Lender',        tx.lender_name   || null],
+    ['Lender Phone',  tx.lender_phone  ? `<a href="tel:${tx.lender_phone}">${esc(tx.lender_phone)}</a>` : null],
+    ['Lender Email',  tx.lender_email  ? `<a href="mailto:${tx.lender_email}">${esc(tx.lender_email)}</a>` : null],
+    ['Title Co.',     tx.title_company || null],
+    ['Title Contact', tx.title_contact || null],
+    ['Title Phone',   tx.title_phone   ? `<a href="tel:${tx.title_phone}">${esc(tx.title_phone)}</a>` : null],
+    ['Other Agent',   tx.other_agent_name  || null],
+    ['Other Agent Ph',tx.other_agent_phone ? `<a href="tel:${tx.other_agent_phone}">${esc(tx.other_agent_phone)}</a>` : null],
+    ['TC',            tx.tc_name       || null],
+    ['TC Email',      tx.tc_email      ? `<a href="mailto:${tx.tc_email}">${esc(tx.tc_email)}</a>` : null],
+    ['HOA',           tx.hoa_name      || null],
+  ].filter(([, v]) => v !== null);
 
   document.getElementById('txInfoCard').innerHTML = `
     <div class="row g-0">
@@ -255,8 +276,7 @@ function renderTransactionDetail() {
         </div>` : ''}
     </div>`;
 
-  // Pre-fill template modal contract date
-  document.getElementById('tplContractDate').value = tx.contract_date || '';
+  document.getElementById('tplContractDate').value = tx.mec_date || '';
   renderDeadlines();
 }
 
@@ -383,28 +403,38 @@ function openTransactionModal(tx) {
   document.getElementById('txModalTitle').textContent = isEdit ? 'Edit Transaction' : 'New Transaction';
   document.getElementById('templateSection').classList.toggle('d-none', isEdit);
 
-  document.getElementById('txId').value            = tx?.id           ?? '';
-  document.getElementById('txAddress').value        = tx?.address      ?? '';
-  document.getElementById('txCity').value           = tx?.city         ?? '';
-  document.getElementById('txState').value          = tx?.state        ?? '';
-  document.getElementById('txZip').value            = tx?.zip_code     ?? '';
-  document.getElementById('txMls').value            = tx?.mls_number   ?? '';
-  document.getElementById('txPrice').value          = tx?.purchase_price ?? '';
-  document.getElementById('txType').value           = tx?.type         ?? 'buyer';
-  document.getElementById('txStatus').value         = tx?.status       ?? 'active';
-  document.getElementById('txContractDate').value   = tx?.contract_date ?? '';
-  document.getElementById('txClosingDate').value    = tx?.closing_date  ?? '';
-  document.getElementById('txClientName').value     = tx?.client_name  ?? '';
-  document.getElementById('txClientPhone').value    = tx?.client_phone ?? '';
-  document.getElementById('txClientEmail').value    = tx?.client_email ?? '';
-  document.getElementById('txAgentName').value      = tx?.agent_name   ?? '';
-  document.getElementById('txCoAgent').value        = tx?.co_agent     ?? '';
-  document.getElementById('txLenderName').value     = tx?.lender_name  ?? '';
-  document.getElementById('txLenderPhone').value    = tx?.lender_phone ?? '';
-  document.getElementById('txTitleCompany').value   = tx?.title_company ?? '';
-  document.getElementById('txTitleContact').value   = tx?.title_contact ?? '';
-  document.getElementById('txNotes').value          = tx?.notes        ?? '';
-  document.getElementById('txTemplate').value       = '';
+  const g = (id, fallback='') => { const el=document.getElementById(id); if(el) el.value = tx?.[fallback||id] ?? ''; };
+  document.getElementById('txId').value              = tx?.id              ?? '';
+  document.getElementById('txAddress').value          = tx?.address         ?? '';
+  document.getElementById('txCity').value             = tx?.city            ?? '';
+  document.getElementById('txState').value            = tx?.state           ?? 'CO';
+  document.getElementById('txZip').value              = tx?.zip_code        ?? '';
+  document.getElementById('txMls').value              = tx?.mls_number      ?? '';
+  document.getElementById('txPrice').value            = tx?.purchase_price  ?? '';
+  document.getElementById('txEarnest').value          = tx?.earnest_money   ?? '';
+  document.getElementById('txType').value             = tx?.type            ?? 'buyer';
+  document.getElementById('txStatus').value           = tx?.status          ?? 'active';
+  document.getElementById('txMecDate').value          = tx?.mec_date        ?? '';
+  document.getElementById('txClosingDate').value      = tx?.closing_date    ?? '';
+  document.getElementById('txPossessionDate').value   = tx?.possession_date ?? '';
+  document.getElementById('txClientName').value       = tx?.client_name     ?? '';
+  document.getElementById('txClientPhone').value      = tx?.client_phone    ?? '';
+  document.getElementById('txClientEmail').value      = tx?.client_email    ?? '';
+  document.getElementById('txAgentName').value        = tx?.agent_name      ?? '';
+  document.getElementById('txCoAgent').value          = tx?.co_agent        ?? '';
+  document.getElementById('txLenderName').value       = tx?.lender_name     ?? '';
+  document.getElementById('txLenderPhone').value      = tx?.lender_phone    ?? '';
+  document.getElementById('txLenderEmail').value      = tx?.lender_email    ?? '';
+  document.getElementById('txTitleCompany').value     = tx?.title_company   ?? '';
+  document.getElementById('txTitleContact').value     = tx?.title_contact   ?? '';
+  document.getElementById('txTitlePhone').value       = tx?.title_phone     ?? '';
+  document.getElementById('txOtherAgentName').value   = tx?.other_agent_name  ?? '';
+  document.getElementById('txOtherAgentPhone').value  = tx?.other_agent_phone ?? '';
+  document.getElementById('txTcName').value           = tx?.tc_name         ?? '';
+  document.getElementById('txTcEmail').value          = tx?.tc_email        ?? '';
+  document.getElementById('txHoaName').value          = tx?.hoa_name        ?? '';
+  document.getElementById('txNotes').value            = tx?.notes           ?? '';
+  document.getElementById('txTemplate').value         = '';
 
   bootstrap.Modal.getOrCreateInstance(document.getElementById('transactionModal')).show();
 }
@@ -415,28 +445,38 @@ function editCurrentTransaction() {
 
 async function saveTransaction() {
   const id = document.getElementById('txId').value;
+  const v = id => document.getElementById(id)?.value.trim() || null;
   const data = {
-    address:       document.getElementById('txAddress').value.trim(),
-    city:          document.getElementById('txCity').value.trim(),
-    state:         document.getElementById('txState').value.trim(),
-    zip_code:      document.getElementById('txZip').value.trim(),
-    mls_number:    document.getElementById('txMls').value.trim(),
-    purchase_price:document.getElementById('txPrice').value || null,
-    type:          document.getElementById('txType').value,
-    status:        document.getElementById('txStatus').value,
-    contract_date: document.getElementById('txContractDate').value || null,
-    closing_date:  document.getElementById('txClosingDate').value  || null,
-    client_name:   document.getElementById('txClientName').value.trim(),
-    client_phone:  document.getElementById('txClientPhone').value.trim(),
-    client_email:  document.getElementById('txClientEmail').value.trim(),
-    agent_name:    document.getElementById('txAgentName').value.trim(),
-    co_agent:      document.getElementById('txCoAgent').value.trim(),
-    lender_name:   document.getElementById('txLenderName').value.trim(),
-    lender_phone:  document.getElementById('txLenderPhone').value.trim(),
-    title_company: document.getElementById('txTitleCompany').value.trim(),
-    title_contact: document.getElementById('txTitleContact').value.trim(),
-    notes:         document.getElementById('txNotes').value.trim(),
-    template:      document.getElementById('txTemplate').value || null,
+    address:          v('txAddress'),
+    city:             v('txCity'),
+    state:            v('txState') || 'CO',
+    zip_code:         v('txZip'),
+    mls_number:       v('txMls'),
+    purchase_price:   document.getElementById('txPrice').value   || null,
+    earnest_money:    document.getElementById('txEarnest').value || null,
+    type:             document.getElementById('txType').value,
+    status:           document.getElementById('txStatus').value,
+    mec_date:         document.getElementById('txMecDate').value        || null,
+    closing_date:     document.getElementById('txClosingDate').value    || null,
+    possession_date:  document.getElementById('txPossessionDate').value || null,
+    client_name:      v('txClientName'),
+    client_phone:     v('txClientPhone'),
+    client_email:     v('txClientEmail'),
+    agent_name:       v('txAgentName'),
+    co_agent:         v('txCoAgent'),
+    lender_name:      v('txLenderName'),
+    lender_phone:     v('txLenderPhone'),
+    lender_email:     v('txLenderEmail'),
+    title_company:    v('txTitleCompany'),
+    title_contact:    v('txTitleContact'),
+    title_phone:      v('txTitlePhone'),
+    other_agent_name: v('txOtherAgentName'),
+    other_agent_phone:v('txOtherAgentPhone'),
+    tc_name:          v('txTcName'),
+    tc_email:         v('txTcEmail'),
+    hoa_name:         v('txHoaName'),
+    notes:            v('txNotes'),
+    template:         document.getElementById('txTemplate').value || null,
   };
 
   if (!data.address) { showToast('Address is required.', 'danger'); return; }
@@ -738,4 +778,223 @@ function catIcon(cat) {
     disclosure:    '<i class="fa-solid fa-clipboard-list cat-icon cat-disclosure" title="Disclosure"></i>',
     custom:        '<i class="fa-solid fa-circle-dot cat-icon cat-custom" title="Custom"></i>',
   }[cat] || '<i class="fa-solid fa-circle-dot cat-icon cat-custom"></i>';
+}
+
+// ─────────────────────────────────────────────── Reports ───
+async function loadReports() {
+  try {
+    const r = await api('GET', '/api/reports/summary');
+    const fmt = v => v ? '$' + Number(v).toLocaleString(undefined, {maximumFractionDigits:0}) : '$0';
+    document.getElementById('rptActiveCount').textContent  = r.stats.active_count;
+    document.getElementById('rptClosedYTD').textContent    = r.stats.ytd_closed_count;
+    document.getElementById('rptPipeline').textContent     = fmt(r.stats.pipeline_value);
+    document.getElementById('rptYTDVolume').textContent    = fmt(r.stats.ytd_volume);
+
+    const activeBody  = document.getElementById('rptActiveBody');
+    const closedBody  = document.getElementById('rptClosedBody');
+
+    activeBody.innerHTML = r.active.length ? r.active.map(t => reportRow(t)).join('') :
+      '<tr><td colspan="6" class="text-muted text-center">No active transactions</td></tr>';
+
+    closedBody.innerHTML = r.closed.length ? r.closed.map(t => reportRow(t)).join('') :
+      '<tr><td colspan="6" class="text-muted text-center">No closed transactions</td></tr>';
+  } catch(e) { showToast('Error loading reports: ' + e.message, 'danger'); }
+}
+
+function reportRow(t) {
+  const price = t.purchase_price ? '$' + Number(t.purchase_price).toLocaleString(undefined,{maximumFractionDigits:0}) : '—';
+  return `<tr style="cursor:pointer" onclick="openTransactionById(${t.id})">
+    <td>${esc(t.address)}${t.city?', '+esc(t.city):''}</td>
+    <td>${esc(t.client_name||'—')}</td>
+    <td><span class="badge ${txStatusClass(t.status)}">${txStatusLabel(t.status)}</span></td>
+    <td>${price}</td>
+    <td>${t.mec_date ? formatDate(t.mec_date) : '—'}</td>
+    <td>${t.closing_date ? formatDate(t.closing_date) : '—'}</td>
+  </tr>`;
+}
+
+// ─────────────────────────────────────────────── CO CBS Import ───
+async function loadCBSDefs() {
+  try { S.cbsDefinitions = await api('GET', '/api/cbs-deadlines'); } catch(e) { console.error(e); }
+}
+
+function openCBSImport() {
+  const mec = S.currentTx?.mec_date || '';
+  document.getElementById('cbsMecDate').value = mec;
+  renderCBSRows(mec);
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('cbsImportModal')).show();
+}
+
+function recalcCBSDates() {
+  const mec = document.getElementById('cbsMecDate').value;
+  if (!mec) return;
+  S.cbsDefinitions.forEach(d => {
+    const inp = document.getElementById('cbs_date_' + d.key);
+    if (inp && d.default_days !== null && d.default_days !== undefined) {
+      const base = new Date(mec + 'T00:00:00');
+      base.setDate(base.getDate() + d.default_days);
+      inp.value = base.toISOString().slice(0, 10);
+    }
+  });
+}
+
+function renderCBSRows(mec) {
+  const txType = S.currentTx?.type || 'buyer';
+  const container = document.getElementById('cbsDeadlineRows');
+  const sections = {};
+  S.cbsDefinitions.forEach(d => {
+    if (!sections[d.section]) sections[d.section] = [];
+    sections[d.section].push(d);
+  });
+
+  let html = '';
+  for (const [section, items] of Object.entries(sections)) {
+    html += `<div class="cbs-section-header">${esc(section)}</div>`;
+    items.forEach(d => {
+      const sideMatch = d.side === 'both' || d.side === txType;
+      let suggestedDate = '';
+      if (mec && d.default_days !== null && d.default_days !== undefined) {
+        const base = new Date(mec + 'T00:00:00');
+        base.setDate(base.getDate() + d.default_days);
+        suggestedDate = base.toISOString().slice(0, 10);
+      }
+      const checked = d.default_enabled && sideMatch ? 'checked' : '';
+      const sideBadge = d.side === 'buyer' ? '<span class="badge bg-primary cbs-side-badge">Buyer</span>'
+                      : d.side === 'seller' ? '<span class="badge bg-success cbs-side-badge">Seller</span>'
+                      : '<span class="badge bg-secondary cbs-side-badge">Both</span>';
+      html += `<div class="cbs-row">
+        <input type="checkbox" id="cbs_chk_${d.key}" ${checked} />
+        <label for="cbs_chk_${d.key}">
+          <span class="cbs-label-title">${esc(d.title)}</span>
+          <span class="cbs-label-desc">${esc(d.description)}</span>
+        </label>
+        ${sideBadge}
+        <input type="date" id="cbs_date_${d.key}" class="form-control form-control-sm cbs-date-input" value="${suggestedDate}" />
+      </div>`;
+    });
+  }
+  container.innerHTML = html;
+}
+
+async function submitCBSImport() {
+  const items = S.cbsDefinitions.map(d => ({
+    key:         d.key,
+    title:       d.title,
+    description: d.description,
+    category:    d.category,
+    priority:    d.priority,
+    due_date:    document.getElementById('cbs_date_' + d.key)?.value || '',
+    enabled:     document.getElementById('cbs_chk_'  + d.key)?.checked || false,
+  }));
+  try {
+    const res = await api('POST', `/api/transactions/${S.currentTx.id}/import-cbs`, items);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('cbsImportModal')).hide();
+    showToast(`Imported ${res.added} deadlines from CO Contract.`, 'success');
+    await refreshCurrentTx();
+  } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+}
+
+// ─────────────────────────────────────────────── Share Modal ───
+function openShareModal() {
+  renderExistingTokens();
+  document.getElementById('shareLabel').value = '';
+  document.getElementById('shareResult').innerHTML = '';
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('shareModal')).show();
+}
+
+function renderExistingTokens() {
+  const tokens = S.currentTx?.share_tokens || [];
+  const el = document.getElementById('existingTokens');
+  if (!tokens.length) { el.innerHTML = '<p class="text-muted small">No active share links.</p>'; return; }
+  el.innerHTML = tokens.map(t => `
+    <div class="d-flex align-items-center gap-2 mb-2 p-2 border rounded small">
+      <div class="flex-grow-1 text-truncate">
+        <div class="fw-semibold">${esc(t.label || 'Unnamed link')}</div>
+        <div class="text-muted text-truncate">${window.location.origin}/view/${t.token}</div>
+      </div>
+      <button class="btn btn-xs btn-outline-secondary" onclick="copyToClipboard('${window.location.origin}/view/${t.token}')" title="Copy">
+        <i class="fa-regular fa-copy"></i>
+      </button>
+      <button class="btn btn-xs btn-outline-danger" onclick="revokeToken('${t.token}')" title="Revoke">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    </div>`).join('');
+}
+
+async function generateShareLink() {
+  const label = document.getElementById('shareLabel').value.trim();
+  try {
+    const res = await api('POST', `/api/transactions/${S.currentTx.id}/share`, { label });
+    const url = `${window.location.origin}/view/${res.token}`;
+    document.getElementById('shareResult').innerHTML = `
+      <div class="alert alert-success d-flex align-items-center gap-2 mb-2">
+        <div class="flex-grow-1 text-truncate small"><strong>Link created:</strong><br>${esc(url)}</div>
+        <button class="btn btn-sm btn-success flex-shrink-0" onclick="copyToClipboard('${url}')">
+          <i class="fa-regular fa-copy"></i> Copy
+        </button>
+      </div>`;
+    await refreshCurrentTx();
+    renderExistingTokens();
+  } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+}
+
+async function revokeToken(token) {
+  showConfirm('Revoke this share link? Anyone using it will lose access.', async () => {
+    try {
+      await api('DELETE', `/api/share-tokens/${token}`);
+      showToast('Link revoked.', 'success');
+      await refreshCurrentTx();
+      renderExistingTokens();
+    } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+  });
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!', 'success'));
+}
+
+// ─────────────────────────────────────────────── Settings ───
+async function openSettings() {
+  try {
+    const s = await api('GET', '/api/settings');
+    document.getElementById('setNotifyEmail').value  = s.notify_email  || '';
+    document.getElementById('setSmtpHost').value     = s.smtp_host     || '';
+    document.getElementById('setSmtpPort').value     = s.smtp_port     || '587';
+    document.getElementById('setSmtpUser').value     = s.smtp_user     || '';
+    document.getElementById('setSmtpPass').value     = s.smtp_pass     || '';
+    document.getElementById('setFromEmail').value    = s.from_email    || '';
+    document.getElementById('setLeadDays').value     = s.notify_lead_days || '3';
+    document.getElementById('setNotifyHour').value   = s.notify_hour   || '7';
+    document.getElementById('setEnabled').checked    = s.notify_enabled === '1';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('settingsModal')).show();
+  } catch(e) { showToast('Error loading settings.', 'danger'); }
+}
+
+async function saveSettings() {
+  const data = {
+    notify_email:     document.getElementById('setNotifyEmail').value.trim(),
+    smtp_host:        document.getElementById('setSmtpHost').value.trim(),
+    smtp_port:        document.getElementById('setSmtpPort').value.trim(),
+    smtp_user:        document.getElementById('setSmtpUser').value.trim(),
+    smtp_pass:        document.getElementById('setSmtpPass').value.trim(),
+    from_email:       document.getElementById('setFromEmail').value.trim(),
+    notify_lead_days: document.getElementById('setLeadDays').value,
+    notify_hour:      document.getElementById('setNotifyHour').value,
+    notify_enabled:   document.getElementById('setEnabled').checked ? '1' : '0',
+  };
+  try {
+    await api('POST', '/api/settings', data);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('settingsModal')).hide();
+    showToast('Settings saved.', 'success');
+  } catch(e) { showToast('Error saving settings.', 'danger'); }
+}
+
+async function testEmail() {
+  const btn = document.getElementById('testEmailBtn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await api('POST', '/api/settings/test-email');
+    showToast(res.success ? 'Test email sent!' : 'Failed: ' + res.message, res.success ? 'success' : 'danger');
+  } catch(e) { showToast('Error: ' + e.message, 'danger'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Test Email'; }
 }
