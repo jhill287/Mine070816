@@ -559,7 +559,9 @@ def shared_view(token):
         "SELECT * FROM deadlines WHERE transaction_id=? ORDER BY due_date, due_time", (tx['id'],)
     ).fetchall()]
     conn.close()
-    return render_template('shared.html', tx=tx, label=row['label'] or 'Shared Transaction View')
+    return render_template('shared.html', tx=tx,
+                           label=row['label'] or 'Shared Transaction View',
+                           now_iso=date.today().isoformat())
 
 
 # ---------------------------------------------------------------------------

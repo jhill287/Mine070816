@@ -21,7 +21,6 @@
     .shared-label {
       font-size: .85rem;
       color: rgba(255,255,255,.7);
-      margin-left: .75rem;
     }
     .tx-header-card {
       background: #fff;
@@ -29,8 +28,9 @@
       border-radius: .5rem;
       padding: 1.5rem;
       margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
     }
-    .tx-address { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
+    .tx-address { font-size: 1.2rem; font-weight: 700; color: var(--navy); }
     .tx-meta { font-size: .9rem; color: #64748b; }
     .dl-group-header {
       font-size: .7rem;
@@ -41,10 +41,12 @@
       padding: .5rem 0 .25rem;
       border-bottom: 1px solid #e2e8f0;
       margin-bottom: .5rem;
+      margin-top: 1.25rem;
     }
     .dl-row {
       background: #fff;
       border: 1px solid #e2e8f0;
+      border-left: 4px solid #e2e8f0;
       border-radius: .375rem;
       padding: .65rem 1rem;
       margin-bottom: .4rem;
@@ -71,7 +73,8 @@
     .dl-done .dl-title { text-decoration: line-through; color: #94a3b8; }
     .dl-icon { width: 1.75rem; text-align: center; flex-shrink: 0; }
     .dl-title { font-weight: 600; font-size: .9rem; }
-    .dl-date { font-size: .82rem; color: #64748b; }
+    .dl-desc { font-size: .8rem; color: #94a3b8; }
+    .dl-date { font-size: .82rem; color: #64748b; white-space: nowrap; }
     .cat-money    { color: #16a34a; }
     .cat-inspect  { color: #7c3aed; }
     .cat-finance  { color: #2563eb; }
@@ -92,12 +95,16 @@
       font-size: .82rem;
       border-top: 1px solid #e2e8f0;
     }
+    .info-row { display: flex; flex-wrap: wrap; gap: .25rem 1.5rem; }
+    .info-item { font-size: .875rem; color: #475569; }
+    .info-item strong { color: #1e293b; }
   </style>
 </head>
 <body>
+  <!-- Navbar -->
   <nav class="navbar shared-navbar navbar-dark">
-    <div class="container">
-      <span class="navbar-brand">
+    <div class="container d-flex align-items-center justify-content-between">
+      <span class="navbar-brand mb-0">
         <i class="fa-solid fa-house me-2"></i>RE Deadline Tracker &mdash; Colorado
       </span>
       <span class="shared-label">
@@ -106,159 +113,163 @@
     </div>
   </nav>
 
-  <div class="container py-4">
+  <div class="container py-4" style="max-width:900px">
 
-    <!-- Transaction Header -->
+    <!-- Transaction Header Card -->
     <div class="tx-header-card">
-      <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+      <div class="d-flex flex-wrap align-items-start justify-content-between gap-3">
         <div>
-          <div class="tx-address">
-            <i class="fa-solid fa-location-dot me-2 text-danger"></i>{{ tx.address }}{% if tx.city %}, {{ tx.city }}{% endif %}{% if tx.state %}, {{ tx.state }}{% endif %}{% if tx.zip_code %} {{ tx.zip_code }}{% endif %}
+          <div class="tx-address mb-1">
+            <i class="fa-solid fa-location-dot me-2 text-danger"></i>{{ tx.address }}{% if tx.city %}, {{ tx.city }}{% endif %}{% if tx.state %} {{ tx.state }}{% endif %}{% if tx.zip_code %} {{ tx.zip_code }}{% endif %}
           </div>
           {% if tx.client_name %}
-          <div class="tx-meta mt-1">
+          <div class="tx-meta mb-2">
             <i class="fa-solid fa-user me-1"></i>{{ tx.client_name }}
           </div>
           {% endif %}
-          <div class="tx-meta mt-1 d-flex flex-wrap gap-3">
+          <div class="info-row">
             {% if tx.mec_date %}
-            <span><i class="fa-solid fa-calendar-check me-1 text-primary"></i><strong>MEC:</strong> {{ tx.mec_date }}</span>
+            <span class="info-item"><i class="fa-solid fa-calendar-check me-1 text-primary"></i><strong>MEC:</strong> {{ tx.mec_date }}</span>
             {% endif %}
             {% if tx.closing_date %}
-            <span><i class="fa-solid fa-key me-1 text-success"></i><strong>Closing:</strong> {{ tx.closing_date }}</span>
+            <span class="info-item"><i class="fa-solid fa-key me-1 text-success"></i><strong>Closing:</strong> {{ tx.closing_date }}</span>
             {% endif %}
             {% if tx.purchase_price %}
-            <span><i class="fa-solid fa-dollar-sign me-1 text-success"></i><strong>Price:</strong> ${{ "{:,.0f}".format(tx.purchase_price) }}</span>
+            <span class="info-item"><i class="fa-solid fa-dollar-sign me-1 text-success"></i><strong>Price:</strong> ${{ "{:,.0f}".format(tx.purchase_price) }}</span>
+            {% endif %}
+            {% if tx.mls_number %}
+            <span class="info-item"><i class="fa-solid fa-hashtag me-1 text-secondary"></i><strong>MLS:</strong> {{ tx.mls_number }}</span>
             {% endif %}
           </div>
         </div>
         <div>
           {% if tx.status == 'active' %}
-            <span class="badge bg-primary fs-6">Active</span>
+            <span class="badge bg-primary px-3 py-2">Active</span>
           {% elif tx.status == 'under_contract' %}
-            <span class="badge bg-success fs-6">Under Contract</span>
+            <span class="badge bg-success px-3 py-2">Under Contract</span>
           {% elif tx.status == 'closed' %}
-            <span class="badge bg-secondary fs-6">Closed</span>
+            <span class="badge bg-secondary px-3 py-2">Closed</span>
+          {% elif tx.status == 'canceled' %}
+            <span class="badge bg-warning text-dark px-3 py-2">Canceled</span>
           {% elif tx.status == 'fallen_through' %}
-            <span class="badge bg-danger fs-6">Fallen Through</span>
+            <span class="badge bg-danger px-3 py-2">Fallen Through</span>
           {% else %}
-            <span class="badge bg-warning text-dark fs-6">{{ tx.status | capitalize }}</span>
+            <span class="badge bg-secondary px-3 py-2">{{ tx.status | capitalize }}</span>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- Deadlines -->
-    {% set today_str = today if today is defined else '' %}
+    <!-- Deadline Groups -->
+    {% if tx.deadlines | length == 0 %}
+      <div class="text-center py-5 text-muted">
+        <i class="fa-solid fa-calendar-xmark fa-3x mb-3 d-block"></i>
+        <p class="mb-0">No deadlines on this transaction.</p>
+      </div>
+    {% else %}
 
-    {# Group deadlines into buckets #}
-    {% set overdue_list = [] %}
-    {% set today_list   = [] %}
-    {% set upcoming_list= [] %}
-    {% set done_list    = [] %}
+      {# Use today passed from Python via a global or compute via macro.
+         Flask's Jinja2 env has access to Python's datetime via a context variable.
+         We'll use a namespace to track today. #}
+      {% set today_iso = now_iso if now_iso is defined else '' %}
 
-    {% for d in tx.deadlines %}
-      {% if d.status == 'completed' or d.status == 'waived' %}
-        {% set _ = done_list.append(d) %}
-      {% elif d.due_date < (namespace(v='')).v %}
-        {% set _ = overdue_list.append(d) %}
-      {% else %}
-        {# We'll sort at render time; just put all pending together first #}
-        {% set _ = upcoming_list.append(d) %}
-      {% endif %}
-    {% endfor %}
-
-    {# Re-bucket using a simpler approach compatible with Jinja2 #}
-    <div id="deadlineGroups">
-
-      {# Overdue group — due_date < today AND pending #}
-      {% set ns = namespace(has_overdue=false, has_today=false, has_upcoming=false, has_done=false) %}
-      {% for d in tx.deadlines %}
-        {% if d.status not in ('completed', 'waived') and d.due_date < tx.mec_date %}
-          {% set ns.has_overdue = true %}
+      {# Build groups — Jinja2 namespace trick for mutable vars #}
+      {% set ns = namespace(overdue=[], today_dl=[], upcoming=[], done=[]) %}
+      {% for d in tx.deadlines | sort(attribute='due_date') %}
+        {% if d.status in ('completed', 'waived') %}
+          {% set ns.done = ns.done + [d] %}
+        {% elif today_iso and d.due_date < today_iso %}
+          {% set ns.overdue = ns.overdue + [d] %}
+        {% elif today_iso and d.due_date == today_iso %}
+          {% set ns.today_dl = ns.today_dl + [d] %}
+        {% else %}
+          {% set ns.upcoming = ns.upcoming + [d] %}
         {% endif %}
       {% endfor %}
 
-      {# Render all pending deadlines sorted, grouped by bucket #}
-      {% set pending = tx.deadlines | selectattr('status', 'equalto', 'pending') | list %}
-      {% set completed = tx.deadlines | selectattr('status', 'in', ['completed', 'waived']) | list %}
+      {# Macro for category icon #}
+      {% macro cat_icon(cat) %}
+        {% if cat == 'inspection' %}<i class="fa-solid fa-magnifying-glass cat-inspect"></i>
+        {% elif cat == 'financing' %}<i class="fa-solid fa-landmark cat-finance"></i>
+        {% elif cat == 'appraisal' %}<i class="fa-solid fa-chart-bar cat-appraisal"></i>
+        {% elif cat == 'title' %}<i class="fa-solid fa-file-contract cat-title"></i>
+        {% elif cat == 'hoa' %}<i class="fa-solid fa-building cat-hoa"></i>
+        {% elif cat == 'survey' %}<i class="fa-solid fa-map cat-survey"></i>
+        {% elif cat == 'insurance' %}<i class="fa-solid fa-shield-halved cat-insurance"></i>
+        {% elif cat == 'closing' %}<i class="fa-solid fa-key cat-closing"></i>
+        {% elif cat == 'disclosure' %}<i class="fa-solid fa-file-lines cat-disclosure"></i>
+        {% elif cat == 'earnest_money' %}<i class="fa-solid fa-money-bill cat-money"></i>
+        {% elif cat == 'walk' %}<i class="fa-solid fa-person-walking cat-walk"></i>
+        {% else %}<i class="fa-solid fa-circle-dot cat-custom"></i>
+        {% endif %}
+      {% endmacro %}
 
-      {# Get today string from python side via a trick — use mec_date as reference only for display #}
-      {# We'll render all pending and let CSS classes indicate urgency based on dates #}
-
-      {% if tx.deadlines | length == 0 %}
-        <div class="text-center py-5 text-muted">
-          <i class="fa-solid fa-calendar-xmark fa-3x mb-3"></i>
-          <p>No deadlines on this transaction.</p>
-        </div>
-      {% else %}
-
-        {# Pending deadlines #}
-        {% set pend = [] %}
-        {% for d in tx.deadlines %}
-          {% if d.status not in ('completed', 'waived') %}
-            {% set _ = pend.append(d) %}
-          {% endif %}
-        {% endfor %}
-
-        {% if pend | length > 0 %}
+      {# Overdue group #}
+      {% if ns.overdue | length > 0 %}
         <div class="dl-group-header">
-          <i class="fa-solid fa-clock me-1"></i>Pending Deadlines ({{ pend | length }})
+          <i class="fa-solid fa-circle-exclamation me-1 text-danger"></i>Overdue ({{ ns.overdue | length }})
         </div>
-        {% for d in pend | sort(attribute='due_date') %}
-          <div class="dl-row dl-upcoming">
-            <div class="dl-icon">
-              {% if d.category == 'inspection' %}
-                <i class="fa-solid fa-magnifying-glass cat-inspect"></i>
-              {% elif d.category == 'financing' %}
-                <i class="fa-solid fa-landmark cat-finance"></i>
-              {% elif d.category == 'appraisal' %}
-                <i class="fa-solid fa-chart-bar cat-appraisal"></i>
-              {% elif d.category == 'title' %}
-                <i class="fa-solid fa-file-contract cat-title"></i>
-              {% elif d.category == 'hoa' %}
-                <i class="fa-solid fa-building cat-hoa"></i>
-              {% elif d.category == 'survey' %}
-                <i class="fa-solid fa-map cat-survey"></i>
-              {% elif d.category == 'insurance' %}
-                <i class="fa-solid fa-shield-halved cat-insurance"></i>
-              {% elif d.category == 'closing' %}
-                <i class="fa-solid fa-key cat-closing"></i>
-              {% elif d.category == 'disclosure' %}
-                <i class="fa-solid fa-file-lines cat-disclosure"></i>
-              {% elif d.category == 'earnest_money' %}
-                <i class="fa-solid fa-money-bill cat-money"></i>
-              {% else %}
-                <i class="fa-solid fa-circle-dot cat-custom"></i>
-              {% endif %}
-            </div>
+        {% for d in ns.overdue %}
+          <div class="dl-row dl-overdue">
+            <div class="dl-icon">{{ cat_icon(d.category) }}</div>
             <div class="flex-grow-1">
               <div class="dl-title">{{ d.title }}</div>
-              {% if d.description %}
-              <div class="dl-date">{{ d.description }}</div>
-              {% endif %}
+              {% if d.description %}<div class="dl-desc">{{ d.description }}</div>{% endif %}
             </div>
-            <div class="text-end">
+            <div class="text-end flex-shrink-0">
+              <div class="dl-date fw-semibold text-danger">{{ d.due_date }}</div>
+              <span class="badge bg-danger">Overdue</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {# Due Today group #}
+      {% if ns.today_dl | length > 0 %}
+        <div class="dl-group-header">
+          <i class="fa-solid fa-bell me-1 text-warning"></i>Due Today ({{ ns.today_dl | length }})
+        </div>
+        {% for d in ns.today_dl %}
+          <div class="dl-row dl-today">
+            <div class="dl-icon">{{ cat_icon(d.category) }}</div>
+            <div class="flex-grow-1">
+              <div class="dl-title">{{ d.title }}</div>
+              {% if d.description %}<div class="dl-desc">{{ d.description }}</div>{% endif %}
+            </div>
+            <div class="text-end flex-shrink-0">
+              <div class="dl-date fw-semibold text-warning">Due Today</div>
+              <span class="badge bg-warning text-dark">Today</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {# Upcoming group #}
+      {% if ns.upcoming | length > 0 %}
+        <div class="dl-group-header">
+          <i class="fa-solid fa-calendar me-1"></i>Upcoming ({{ ns.upcoming | length }})
+        </div>
+        {% for d in ns.upcoming %}
+          <div class="dl-row dl-upcoming">
+            <div class="dl-icon">{{ cat_icon(d.category) }}</div>
+            <div class="flex-grow-1">
+              <div class="dl-title">{{ d.title }}</div>
+              {% if d.description %}<div class="dl-desc">{{ d.description }}</div>{% endif %}
+            </div>
+            <div class="text-end flex-shrink-0">
               <div class="dl-date">{{ d.due_date }}</div>
               <span class="badge bg-secondary">Pending</span>
             </div>
           </div>
         {% endfor %}
-        {% endif %}
+      {% endif %}
 
-        {# Completed deadlines #}
-        {% set done = [] %}
-        {% for d in tx.deadlines %}
-          {% if d.status in ('completed', 'waived') %}
-            {% set _ = done.append(d) %}
-          {% endif %}
-        {% endfor %}
-
-        {% if done | length > 0 %}
-        <div class="dl-group-header mt-3">
-          <i class="fa-solid fa-circle-check me-1"></i>Completed ({{ done | length }})
+      {# Done group #}
+      {% if ns.done | length > 0 %}
+        <div class="dl-group-header">
+          <i class="fa-solid fa-circle-check me-1 text-success"></i>Completed ({{ ns.done | length }})
         </div>
-        {% for d in done | sort(attribute='due_date') %}
+        {% for d in ns.done %}
           <div class="dl-row dl-done">
             <div class="dl-icon">
               <i class="fa-solid fa-circle-check text-success"></i>
@@ -266,22 +277,21 @@
             <div class="flex-grow-1">
               <div class="dl-title">{{ d.title }}</div>
             </div>
-            <div class="text-end">
+            <div class="text-end flex-shrink-0">
               <div class="dl-date">{{ d.due_date }}</div>
               <span class="badge bg-success">Done</span>
             </div>
           </div>
         {% endfor %}
-        {% endif %}
-
       {% endif %}
-    </div>
+
+    {% endif %}
 
   </div>
 
   <footer>
     <i class="fa-solid fa-lock me-1"></i>This is a read-only shared view.
-    &mdash; RE Deadline Tracker &mdash; Colorado
+    &nbsp;&mdash;&nbsp; RE Deadline Tracker &mdash; Colorado
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
