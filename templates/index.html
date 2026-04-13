@@ -25,6 +25,9 @@
         <i class="fa-solid fa-bell"></i>
         <span id="alertBellCount" class="badge bg-danger">0</span>
       </span>
+      <button class="btn btn-outline-light btn-sm" onclick="openCtmImport()" title="Import an executed CTM contract">
+        <i class="fa-solid fa-file-import me-1"></i>CTM Import
+      </button>
       <button class="btn btn-outline-light btn-sm" onclick="openTransactionModal()">
         <i class="fa-solid fa-plus me-1"></i>New Transaction
       </button>
@@ -254,6 +257,138 @@
   </div>
 
 </div><!-- /reportsView -->
+
+<!-- ════════════════════════════════════════ CTM IMPORT MODAL ═══ -->
+<div class="modal fade" id="ctmImportModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--navy);color:#fff">
+        <h5 class="modal-title"><i class="fa-solid fa-file-import me-2"></i>Import from CTM eContracts</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="ctmForm">
+          <p class="text-muted small mb-3">Enter the key details from your executed CTM contract. The app will create the transaction and auto-calculate all CO CBS deadlines from the MEC date.</p>
+
+          <div class="form-section-title mb-2">Property</div>
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Property Address <span class="text-danger">*</span></label>
+              <input type="text" id="ctmAddress" class="form-control" placeholder="123 Main St" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">City</label>
+              <input type="text" id="ctmCity" class="form-control" placeholder="Denver" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">ZIP</label>
+              <input type="text" id="ctmZip" class="form-control" placeholder="80202" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">MLS #</label>
+              <input type="text" id="ctmMls" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">Side</label>
+              <select id="ctmType" class="form-select">
+                <option value="buyer">Buyer</option>
+                <option value="seller">Seller</option>
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">Purchase Price</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="ctmPrice" class="form-control" placeholder="500000" />
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">Earnest Money</label>
+              <div class="input-group">
+                <span class="input-group-text">$</span>
+                <input type="number" id="ctmEarnest" class="form-control" placeholder="10000" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section-title mb-2">Key Dates (from CTM Section 3)</div>
+          <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold">MEC Date <span class="text-danger">*</span></label>
+              <input type="date" id="ctmMecDate" class="form-control" />
+              <div class="form-text">Mutual Execution of Contract</div>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">Closing Date</label>
+              <input type="date" id="ctmCloseDate" class="form-control" />
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label">Auto-Apply CBS Template</label>
+              <select id="ctmCloseDays" class="form-select">
+                <option value="30">30-Day Close</option>
+                <option value="45">45-Day Close</option>
+                <option value="none">No template</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-section-title mb-2">Client</div>
+          <div class="row g-2 mb-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label">Client Name</label>
+              <input type="text" id="ctmClientName" class="form-control" placeholder="Jane Smith" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Client Phone</label>
+              <input type="tel" id="ctmClientPhone" class="form-control" placeholder="303-555-0100" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Client Email</label>
+              <input type="email" id="ctmClientEmail" class="form-control" placeholder="client@email.com" />
+            </div>
+          </div>
+
+          <div class="form-section-title mb-2">Other Parties</div>
+          <div class="row g-2 mb-3">
+            <div class="col-6 col-md-4">
+              <label class="form-label">Co-op Agent</label>
+              <input type="text" id="ctmCoAgent" class="form-control" placeholder="Agent name" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Co-op Agent Phone</label>
+              <input type="tel" id="ctmCoAgentPhone" class="form-control" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Lender</label>
+              <input type="text" id="ctmLender" class="form-control" placeholder="Bank / Credit Union" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Lender Phone</label>
+              <input type="tel" id="ctmLenderPhone" class="form-control" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Lender Email</label>
+              <input type="email" id="ctmLenderEmail" class="form-control" />
+            </div>
+            <div class="col-6 col-md-4">
+              <label class="form-label">Title Company</label>
+              <input type="text" id="ctmTitle" class="form-control" placeholder="Land Title, Stewart…" />
+            </div>
+          </div>
+
+          <div class="form-section-title mb-2">Notes</div>
+          <textarea id="ctmNotes" class="form-control" rows="2" placeholder="Any notes about this contract…"></textarea>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="ctmSubmitBtn" class="btn btn-primary" onclick="submitCtmImport()">
+          <i class="fa-solid fa-file-import me-1"></i>Import Transaction
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════════ TRANSACTION MODAL ═══ -->
 <div class="modal fade" id="transactionModal" tabindex="-1">

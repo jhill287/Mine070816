@@ -6,6 +6,8 @@ const S = {
   currentTx: null,
   templates: {},
   cbsDefinitions: [],
+  currentFilter: null,   // active filter key when filteredView is showing
+  dlCache: {},           // deadline objects by id, used by filteredView actions
 };
 
 // ─────────────────────────────────────────────── Boot ───
@@ -32,6 +34,7 @@ async function api(method, path, body) {
 
 // ─────────────────────────────────────────────── Views ───
 function showDashboard() {
+  S.currentFilter = null;
   document.getElementById('dashboardView').classList.remove('d-none');
   document.getElementById('transactionView').classList.add('d-none');
   document.getElementById('reportsView').classList.add('d-none');
@@ -41,6 +44,7 @@ function showDashboard() {
 }
 
 function showTransaction(tx) {
+  S.currentFilter = null;
   S.currentTx = tx;
   document.getElementById('dashboardView').classList.add('d-none');
   document.getElementById('transactionView').classList.remove('d-none');
@@ -50,6 +54,7 @@ function showTransaction(tx) {
 }
 
 function showReports() {
+  S.currentFilter = null;
   document.getElementById('dashboardView').classList.add('d-none');
   document.getElementById('transactionView').classList.add('d-none');
   document.getElementById('reportsView').classList.remove('d-none');
@@ -143,6 +148,7 @@ function filterTransactions() { loadTransactions(); }
 
 // ─────────────────────────────────────────────── Filtered View ───
 async function filterByStatus(filter) {
+  S.currentFilter = filter;
   try {
     document.getElementById('dashboardView').classList.add('d-none');
     document.getElementById('transactionView').classList.add('d-none');
@@ -231,26 +237,48 @@ async function filterByStatus(filter) {
 }
 
 function filteredDlRow(d) {
-  const today = todayStr();
-  const isOverdue = d.status === 'pending' && d.due_date < today;
-  const isToday   = d.status === 'pending' && d.due_date === today;
-  const rowClass  = isOverdue ? 'dl-row dl-overdue' : isToday ? 'dl-row dl-today' : 'dl-row';
+  S.dlCache[d.id] = d;  // cache so edit modal can find it
+  const today     = todayStr();
+  const isPending = d.status === 'pending';
+  const isOverdue = isPending && d.due_date < today;
+  const isToday   = isPending && d.due_date === today;
+  const rowClass  = isOverdue ? 'dl-row dl-overdue' : isToday ? 'dl-row dl-today' : isPending ? 'dl-row' : 'dl-row dl-done';
+
   const dateLabel = isOverdue
     ? `<span class="text-danger fw-semibold">${daysLabel(d.due_date)}</span>`
-    : isToday
-      ? `<span class="text-warning fw-semibold">Due today</span>`
-      : `<span class="text-muted">${formatDate(d.due_date)}</span>`;
+    : isToday   ? `<span class="text-warning fw-semibold">Due today</span>`
+    : `<span class="text-muted">${formatDate(d.due_date)}</span>`;
+
+  const priorityDot = d.priority === 'high'   ? '<span class="priority-dot priority-high"></span>'
+                    : d.priority === 'medium'  ? '<span class="priority-dot priority-medium"></span>'
+                    :                            '<span class="priority-dot priority-low"></span>';
+
+  const quickBtns = isPending ? `
+    <button class="btn btn-xs btn-success"  onclick="quickStatus(${d.id},'completed')"><i class="fa-solid fa-check me-1"></i>Complete</button>
+    <button class="btn btn-xs btn-secondary" onclick="quickStatus(${d.id},'waived')"><i class="fa-solid fa-ban me-1"></i>Waive</button>
+    <button class="btn btn-xs btn-warning text-dark" onclick="quickStatus(${d.id},'expired')"><i class="fa-solid fa-hourglass-end me-1"></i>Expire</button>` : `
+    <button class="btn btn-xs btn-outline-secondary" onclick="quickStatus(${d.id},'pending')"><i class="fa-solid fa-rotate-left me-1"></i>Reopen</button>`;
+
   return `
-  <div class="${rowClass}">
+  <div class="${rowClass}" id="dl-${d.id}">
     <div class="dl-left">
+      ${priorityDot}
       <span class="dl-cat-icon">${catIcon(d.category)}</span>
       <div class="dl-info">
-        <div class="dl-title">${esc(d.title)}</div>
+        <div class="dl-title ${!isPending ? 'text-decoration-line-through text-muted' : ''}">${esc(d.title)}</div>
         ${d.description ? `<div class="dl-desc">${esc(d.description)}</div>` : ''}
       </div>
     </div>
     <div class="dl-right">
-      <div class="dl-date-area">${dateLabel}</div>
+      <div class="dl-date-area">
+        ${dateLabel}
+        <div class="small text-muted">${d.due_time || '17:00'}</div>
+      </div>
+      <div class="dl-actions">
+        ${quickBtns}
+        <button class="btn btn-xs btn-outline-secondary" onclick="openDeadlineModal(${d.id})"><i class="fa-solid fa-pen me-1"></i>Edit</button>
+        <button class="btn btn-xs btn-outline-danger" onclick="confirmDeleteDeadline(${d.id},'${esc(d.title).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash me-1"></i>Delete</button>
+      </div>
     </div>
   </div>`;
 }
@@ -276,6 +304,9 @@ function txCard(t) {
   const statusClass = txStatusClass(t.status);
   const statusLabel = txStatusLabel(t.status);
   const typeIcon    = txTypeIcon(t.type);
+  const typeBadge   = t.type === 'seller'
+    ? '<span class="badge text-white" style="background:#2d7a4f;font-size:.72rem;letter-spacing:.04em">SELLER</span>'
+    : '<span class="badge text-white" style="background:#003DA5;font-size:.72rem;letter-spacing:.04em">BUYER</span>';
 
   let urgencyHtml = '';
   if (t.overdue_count > 0) {
@@ -311,6 +342,7 @@ function txCard(t) {
           </div>
         </div>
         <div class="d-flex flex-column align-items-end gap-1 flex-shrink-0">
+          ${typeBadge}
           <span class="badge ${statusClass}">${statusLabel}</span>
           ${urgencyHtml}
         </div>
@@ -637,10 +669,14 @@ async function deleteCurrentTransaction() {
 function openDeadlineModal(id) {
   const isEdit = typeof id === 'number';
   document.getElementById('dlModalTitle').textContent = isEdit ? 'Edit Deadline' : 'Add Deadline';
-  document.getElementById('dlTransactionId').value = S.currentTx.id;
 
+  // find deadline from current tx, or fall back to dlCache (filtered view)
   let d = null;
-  if (isEdit) d = S.currentTx.deadlines.find(x => x.id === id);
+  if (isEdit) {
+    d = S.currentTx?.deadlines?.find(x => x.id === id) || S.dlCache[id] || null;
+  }
+  const tid = d?.transaction_id ?? S.currentTx?.id ?? '';
+  document.getElementById('dlTransactionId').value = tid;
 
   document.getElementById('dlId').value          = d?.id          ?? '';
   document.getElementById('dlTitle').value       = d?.title       ?? '';
@@ -693,9 +729,9 @@ async function quickStatus(did, status) {
   } catch (e) { showToast('Error: ' + e.message, 'danger'); }
 }
 
-function confirmDeleteDeadline(did) {
-  const d = S.currentTx.deadlines.find(x => x.id === did);
-  showConfirm(`Delete "${d?.title || 'this deadline'}"?`, async () => {
+function confirmDeleteDeadline(did, title) {
+  const label = title || S.currentTx?.deadlines?.find(x => x.id === did)?.title || S.dlCache[did]?.title || 'this deadline';
+  showConfirm(`Delete "${label}"?`, async () => {
     try {
       await api('DELETE', `/api/deadlines/${did}`);
       showToast('Deadline deleted.', 'success');
@@ -705,6 +741,7 @@ function confirmDeleteDeadline(did) {
 }
 
 async function refreshCurrentTx() {
+  if (S.currentFilter) { await filterByStatus(S.currentFilter); return; }
   if (!S.currentTx) return;
   S.currentTx = await api('GET', `/api/transactions/${S.currentTx.id}`);
   renderDeadlines();
@@ -1068,6 +1105,70 @@ async function revokeToken(token) {
 
 function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!', 'success'));
+}
+
+// ─────────────────────────────────────────────── CTM Import ───
+function openCtmImport() {
+  document.getElementById('ctmForm').reset();
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('ctmImportModal')).show();
+}
+
+async function submitCtmImport() {
+  const v = id => document.getElementById(id)?.value.trim() || null;
+  const type     = document.getElementById('ctmType').value;
+  const mecDate  = v('ctmMecDate');
+  const closeDays= document.getElementById('ctmCloseDays').value;
+
+  const txData = {
+    address:        v('ctmAddress'),
+    city:           v('ctmCity'),
+    state:          'CO',
+    zip_code:       v('ctmZip'),
+    mls_number:     v('ctmMls'),
+    type,
+    status:         'under_contract',
+    purchase_price: v('ctmPrice'),
+    earnest_money:  v('ctmEarnest'),
+    mec_date:       mecDate,
+    closing_date:   v('ctmCloseDate'),
+    possession_date:v('ctmCloseDate'),
+    client_name:    v('ctmClientName'),
+    client_phone:   v('ctmClientPhone'),
+    client_email:   v('ctmClientEmail'),
+    other_agent_name:  v('ctmCoAgent'),
+    other_agent_phone: v('ctmCoAgentPhone'),
+    lender_name:    v('ctmLender'),
+    lender_phone:   v('ctmLenderPhone'),
+    lender_email:   v('ctmLenderEmail'),
+    title_company:  v('ctmTitle'),
+    notes:          v('ctmNotes'),
+  };
+
+  if (!txData.address) { showToast('Property address is required.', 'danger'); return; }
+
+  const btn = document.getElementById('ctmSubmitBtn');
+  btn.disabled = true; btn.textContent = 'Importing…';
+
+  try {
+    const tx = await api('POST', '/api/transactions', txData);
+
+    // Auto-apply CBS template if MEC date provided
+    if (mecDate && closeDays !== 'none') {
+      const template = `co_cbs_${type}_${closeDays}`;
+      try {
+        await api('POST', `/api/transactions/${tx.id}/apply-template`, { template, mec_date: mecDate });
+      } catch(e) { console.warn('Template apply failed:', e); }
+    }
+
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('ctmImportModal')).hide();
+    showToast('Transaction imported from CTM!', 'success');
+    const full = await api('GET', `/api/transactions/${tx.id}`);
+    showTransaction(full);
+  } catch(e) {
+    showToast('Error: ' + e.message, 'danger');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-file-import me-1"></i>Import Transaction';
+  }
 }
 
 // ─────────────────────────────────────────────── Settings ───
