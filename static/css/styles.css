@@ -199,19 +199,25 @@ body {
 
 /* ─── Deadline rows ────────────────────────────────────────── */
 .dl-row {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  border: 1px solid #d1d9e6;
+  border-left: 4px solid #d1d9e6;
   border-radius: 8px;
-  padding: .7rem .9rem;
-  margin-bottom: .5rem;
+  padding: .85rem 1rem;
+  margin-bottom: .6rem;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: .75rem;
-  transition: box-shadow .12s;
+  transition: box-shadow .12s, border-color .12s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
 }
-.dl-row:nth-child(even) { background: #f0f4ff; }
-.dl-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+.dl-row:nth-child(even) {
+  background: #eef2fb;
+  border-color: #c2cde0;
+  border-left-color: #c2cde0;
+}
+.dl-row:hover { box-shadow: 0 3px 10px rgba(0,0,0,.11); }
 
 .dl-overdue {
   border-left: 4px solid #E31837 !important;
