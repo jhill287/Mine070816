@@ -34,6 +34,14 @@ body {
   letter-spacing: .02em;
 }
 .navbar-brand i { color: #E31837; }
+.navbar-logo {
+  height: 38px;
+  width: auto;
+  background: #fff;
+  border-radius: 6px;
+  padding: 3px 7px;
+  flex-shrink: 0;
+}
 .navbar-subtitle {
   font-size: .72rem;
   color: rgba(255,255,255,.65);
