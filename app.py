@@ -518,7 +518,7 @@ def build_digest_email(overdue, due_soon):
     if not overdue and not due_soon:
         lines.append('<p style="color:#16a34a">✅ No overdue or upcoming deadlines today.</p>')
 
-    lines.append('<p style="font-size:12px;color:#94a3b8;margin-top:24px">RE Deadline Tracker — Colorado</p>')
+    lines.append('<p style="font-size:12px;color:#94a3b8;margin-top:24px">JHH Deadline Tracker</p>')
     return ''.join(lines)
 
 
@@ -984,7 +984,7 @@ def save_settings():
 @app.route('/api/settings/test-email', methods=['POST'])
 def test_email():
     ok, msg = send_email(
-        'RE Deadline Tracker — Test Email',
+        'JHH Deadline Tracker — Test Email',
         '<h2>It works!</h2><p>Your email notifications are configured correctly.</p>'
     )
     return jsonify({'success': ok, 'message': msg})
