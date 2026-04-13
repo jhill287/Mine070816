@@ -35,6 +35,7 @@ function showDashboard() {
   document.getElementById('dashboardView').classList.remove('d-none');
   document.getElementById('transactionView').classList.add('d-none');
   document.getElementById('reportsView').classList.add('d-none');
+  document.getElementById('filteredView').classList.add('d-none');
   loadDashboard();
   loadTransactions();
 }
@@ -44,6 +45,7 @@ function showTransaction(tx) {
   document.getElementById('dashboardView').classList.add('d-none');
   document.getElementById('transactionView').classList.remove('d-none');
   document.getElementById('reportsView').classList.add('d-none');
+  document.getElementById('filteredView').classList.add('d-none');
   renderTransactionDetail();
 }
 
@@ -51,6 +53,7 @@ function showReports() {
   document.getElementById('dashboardView').classList.add('d-none');
   document.getElementById('transactionView').classList.add('d-none');
   document.getElementById('reportsView').classList.remove('d-none');
+  document.getElementById('filteredView').classList.add('d-none');
   loadReports();
 }
 
@@ -137,6 +140,120 @@ async function loadTransactions() {
 }
 
 function filterTransactions() { loadTransactions(); }
+
+// ─────────────────────────────────────────────── Filtered View ───
+async function filterByStatus(filter) {
+  try {
+    document.getElementById('dashboardView').classList.add('d-none');
+    document.getElementById('transactionView').classList.add('d-none');
+    document.getElementById('reportsView').classList.add('d-none');
+    document.getElementById('filteredView').classList.remove('d-none');
+
+    const titleEl = document.getElementById('filteredViewTitle');
+    const body    = document.getElementById('filteredViewBody');
+    body.innerHTML = '<div class="text-muted py-4 text-center"><i class="fa-solid fa-spinner fa-spin me-2"></i>Loading…</div>';
+
+    if (filter === 'active') {
+      titleEl.innerHTML = '<i class="fa-solid fa-file-contract text-primary me-2"></i>Active Deals';
+      const txList = await api('GET', '/api/transactions?status=active');
+      const ucList = await api('GET', '/api/transactions?status=under_contract');
+      const combined = [...txList, ...ucList];
+      if (!combined.length) {
+        body.innerHTML = '<div class="empty-state"><i class="fa-solid fa-house-circle-xmark"></i><h5>No active transactions</h5></div>';
+        return;
+      }
+      body.innerHTML = `<div class="row g-3">${combined.map(t => txCard(t)).join('')}</div>`;
+      return;
+    }
+
+    // For overdue/today/week — fetch all transactions with their deadlines via alerts API
+    const alertData = await api('GET', '/api/alerts');
+    const allTx = await api('GET', '/api/transactions');
+    const today = todayStr();
+    const weekOut = new Date(); weekOut.setDate(weekOut.getDate() + 7);
+    const weekStr = weekOut.toISOString().slice(0, 10);
+
+    // Gather all pending deadlines across all transactions
+    const txMap = {};
+    allTx.forEach(t => { txMap[t.id] = t; });
+
+    // Use alert data for overdue, and fetch full tx data for today/week
+    let filterTitle = '';
+    let grouped = {}; // txId -> { tx, deadlines[] }
+
+    if (filter === 'overdue') {
+      filterTitle = '<i class="fa-solid fa-circle-exclamation text-danger me-2"></i>Overdue Deadlines';
+      alertData.overdue.forEach(d => {
+        if (!grouped[d.transaction_id]) grouped[d.transaction_id] = { tx: { address: d.address, id: d.transaction_id }, deadlines: [] };
+        grouped[d.transaction_id].deadlines.push(d);
+      });
+    } else {
+      // For today/week we need full deadline data — fetch each tx
+      const txListFull = await Promise.all(allTx.map(t => api('GET', `/api/transactions/${t.id}`)));
+      txListFull.forEach(tx => {
+        const matching = (tx.deadlines || []).filter(d => {
+          if (d.status !== 'pending') return false;
+          if (filter === 'today') return d.due_date === today;
+          if (filter === 'week')  return d.due_date >= today && d.due_date <= weekStr;
+          return false;
+        });
+        if (matching.length) {
+          grouped[tx.id] = { tx, deadlines: matching };
+        }
+      });
+      filterTitle = filter === 'today'
+        ? '<i class="fa-solid fa-calendar-day text-warning me-2"></i>Due Today'
+        : '<i class="fa-solid fa-calendar-week text-info me-2"></i>Due This Week';
+    }
+
+    titleEl.innerHTML = filterTitle;
+    const groups = Object.values(grouped);
+    if (!groups.length) {
+      body.innerHTML = '<div class="empty-state"><i class="fa-regular fa-calendar-check"></i><h5>Nothing to show</h5><p class="text-muted">No deadlines match this filter.</p></div>';
+      return;
+    }
+
+    let html = '';
+    groups.forEach(({ tx, deadlines }) => {
+      html += `<div class="mb-4">
+        <h6 class="fw-semibold mb-2">
+          <a href="#" class="text-decoration-none" onclick="openTransactionById(${tx.id});return false;">
+            <i class="fa-solid fa-house me-1 text-muted"></i>${esc(tx.address)}${tx.city ? ', ' + esc(tx.city) : ''}
+          </a>
+        </h6>
+        <div class="ps-2">
+          ${deadlines.map(d => filteredDlRow(d)).join('')}
+        </div>
+      </div>`;
+    });
+    body.innerHTML = html;
+  } catch (e) { console.error(e); showToast('Error loading filtered view.', 'danger'); }
+}
+
+function filteredDlRow(d) {
+  const today = todayStr();
+  const isOverdue = d.status === 'pending' && d.due_date < today;
+  const isToday   = d.status === 'pending' && d.due_date === today;
+  const rowClass  = isOverdue ? 'dl-row dl-overdue' : isToday ? 'dl-row dl-today' : 'dl-row';
+  const dateLabel = isOverdue
+    ? `<span class="text-danger fw-semibold">${daysLabel(d.due_date)}</span>`
+    : isToday
+      ? `<span class="text-warning fw-semibold">Due today</span>`
+      : `<span class="text-muted">${formatDate(d.due_date)}</span>`;
+  return `
+  <div class="${rowClass}">
+    <div class="dl-left">
+      <span class="dl-cat-icon">${catIcon(d.category)}</span>
+      <div class="dl-info">
+        <div class="dl-title">${esc(d.title)}</div>
+        ${d.description ? `<div class="dl-desc">${esc(d.description)}</div>` : ''}
+      </div>
+    </div>
+    <div class="dl-right">
+      <div class="dl-date-area">${dateLabel}</div>
+    </div>
+  </div>`;
+}
 
 function renderTransactionGrid() {
   const grid  = document.getElementById('transactionGrid');
@@ -785,13 +902,13 @@ async function loadReports() {
   try {
     const r = await api('GET', '/api/reports/summary');
     const fmt = v => v ? '$' + Number(v).toLocaleString(undefined, {maximumFractionDigits:0}) : '$0';
-    document.getElementById('rptActiveCount').textContent  = r.stats.active_count;
-    document.getElementById('rptClosedYTD').textContent    = r.stats.ytd_closed_count;
-    document.getElementById('rptPipeline').textContent     = fmt(r.stats.pipeline_value);
-    document.getElementById('rptYTDVolume').textContent    = fmt(r.stats.ytd_volume);
+    document.getElementById('rptActive').textContent      = r.stats.active_count;
+    document.getElementById('rptClosedYtd').textContent   = r.stats.ytd_closed_count;
+    document.getElementById('rptPipeline').textContent    = fmt(r.stats.pipeline_value);
+    document.getElementById('rptYtdVolume').textContent   = fmt(r.stats.ytd_volume);
 
-    const activeBody  = document.getElementById('rptActiveBody');
-    const closedBody  = document.getElementById('rptClosedBody');
+    const activeBody  = document.getElementById('rptActiveTable');
+    const closedBody  = document.getElementById('rptClosedTable');
 
     activeBody.innerHTML = r.active.length ? r.active.map(t => reportRow(t)).join('') :
       '<tr><td colspan="6" class="text-muted text-center">No active transactions</td></tr>';
@@ -957,30 +1074,30 @@ function copyToClipboard(text) {
 async function openSettings() {
   try {
     const s = await api('GET', '/api/settings');
-    document.getElementById('setNotifyEmail').value  = s.notify_email  || '';
-    document.getElementById('setSmtpHost').value     = s.smtp_host     || '';
-    document.getElementById('setSmtpPort').value     = s.smtp_port     || '587';
-    document.getElementById('setSmtpUser').value     = s.smtp_user     || '';
-    document.getElementById('setSmtpPass').value     = s.smtp_pass     || '';
-    document.getElementById('setFromEmail').value    = s.from_email    || '';
-    document.getElementById('setLeadDays').value     = s.notify_lead_days || '3';
-    document.getElementById('setNotifyHour').value   = s.notify_hour   || '7';
-    document.getElementById('setEnabled').checked    = s.notify_enabled === '1';
+    document.getElementById('stNotifyEmail').value  = s.notify_email  || '';
+    document.getElementById('stSmtpHost').value     = s.smtp_host     || '';
+    document.getElementById('stSmtpPort').value     = s.smtp_port     || '587';
+    document.getElementById('stSmtpUser').value     = s.smtp_user     || '';
+    document.getElementById('stSmtpPass').value     = s.smtp_pass     || '';
+    document.getElementById('stFromEmail').value    = s.from_email    || '';
+    document.getElementById('stLeadDays').value     = s.notify_lead_days || '3';
+    document.getElementById('stNotifyHour').value   = s.notify_hour   || '7';
+    document.getElementById('stNotifyEnabled').checked = s.notify_enabled === '1';
     bootstrap.Modal.getOrCreateInstance(document.getElementById('settingsModal')).show();
   } catch(e) { showToast('Error loading settings.', 'danger'); }
 }
 
 async function saveSettings() {
   const data = {
-    notify_email:     document.getElementById('setNotifyEmail').value.trim(),
-    smtp_host:        document.getElementById('setSmtpHost').value.trim(),
-    smtp_port:        document.getElementById('setSmtpPort').value.trim(),
-    smtp_user:        document.getElementById('setSmtpUser').value.trim(),
-    smtp_pass:        document.getElementById('setSmtpPass').value.trim(),
-    from_email:       document.getElementById('setFromEmail').value.trim(),
-    notify_lead_days: document.getElementById('setLeadDays').value,
-    notify_hour:      document.getElementById('setNotifyHour').value,
-    notify_enabled:   document.getElementById('setEnabled').checked ? '1' : '0',
+    notify_email:     document.getElementById('stNotifyEmail').value.trim(),
+    smtp_host:        document.getElementById('stSmtpHost').value.trim(),
+    smtp_port:        document.getElementById('stSmtpPort').value.trim(),
+    smtp_user:        document.getElementById('stSmtpUser').value.trim(),
+    smtp_pass:        document.getElementById('stSmtpPass').value.trim(),
+    from_email:       document.getElementById('stFromEmail').value.trim(),
+    notify_lead_days: document.getElementById('stLeadDays').value,
+    notify_hour:      document.getElementById('stNotifyHour').value,
+    notify_enabled:   document.getElementById('stNotifyEnabled').checked ? '1' : '0',
   };
   try {
     await api('POST', '/api/settings', data);
@@ -990,11 +1107,11 @@ async function saveSettings() {
 }
 
 async function testEmail() {
-  const btn = document.getElementById('testEmailBtn');
-  btn.disabled = true; btn.textContent = 'Sending…';
+  const btn = document.querySelector('#settingsModal button[onclick="testEmail()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
   try {
     const res = await api('POST', '/api/settings/test-email');
     showToast(res.success ? 'Test email sent!' : 'Failed: ' + res.message, res.success ? 'success' : 'danger');
   } catch(e) { showToast('Error: ' + e.message, 'danger'); }
-  finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Test Email'; }
+  finally { if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane me-1"></i>Send Test Email'; } }
 }

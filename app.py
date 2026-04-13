@@ -968,7 +968,7 @@ def revoke_share(token):
 
 @app.route('/api/settings', methods=['GET'])
 def get_settings():
-    keys = ['notify_email', 'smtp_host', 'smtp_port', 'smtp_user',
+    keys = ['notify_email', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
             'notify_lead_days', 'notify_hour', 'notify_enabled', 'from_email']
     return jsonify({k: get_setting(k, '') for k in keys})
 

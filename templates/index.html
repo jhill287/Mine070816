@@ -15,7 +15,10 @@
   <div class="container-fluid px-4">
     <a class="navbar-brand d-flex align-items-center gap-2" href="#" onclick="showDashboard();return false;">
       <i class="fa-solid fa-house"></i>
-      <span class="fw-bold">RE Deadline Tracker &mdash; Colorado</span>
+      <span>
+        <span class="fw-bold d-block">RE Deadline Tracker &mdash; Colorado</span>
+        <span class="navbar-subtitle">RE/MAX Alliance</span>
+      </span>
     </a>
     <div class="d-flex align-items-center gap-3">
       <span id="alertBell" class="alert-bell d-none" onclick="scrollToAlerts()" title="View urgent items">
@@ -35,38 +38,42 @@
   <!-- Stats row -->
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" onclick="filterByStatus('active')">
         <div class="stat-icon bg-primary-soft"><i class="fa-solid fa-file-contract text-primary"></i></div>
-        <div>
+        <div class="flex-grow-1">
           <div class="stat-label">Active Deals</div>
           <div id="statActive" class="stat-value">—</div>
+          <div class="stat-hint">click to view &rarr;</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" onclick="filterByStatus('overdue')">
         <div class="stat-icon bg-danger-soft"><i class="fa-solid fa-circle-exclamation text-danger"></i></div>
-        <div>
+        <div class="flex-grow-1">
           <div class="stat-label">Overdue</div>
           <div id="statOverdue" class="stat-value text-danger">—</div>
+          <div class="stat-hint">click to view &rarr;</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" onclick="filterByStatus('today')">
         <div class="stat-icon bg-warning-soft"><i class="fa-solid fa-calendar-day text-warning"></i></div>
-        <div>
+        <div class="flex-grow-1">
           <div class="stat-label">Due Today</div>
           <div id="statToday" class="stat-value text-warning">—</div>
+          <div class="stat-hint">click to view &rarr;</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="stat-card">
+      <div class="stat-card stat-card-clickable" onclick="filterByStatus('week')">
         <div class="stat-icon bg-info-soft"><i class="fa-solid fa-calendar-week text-info"></i></div>
-        <div>
+        <div class="flex-grow-1">
           <div class="stat-label">Due This Week</div>
           <div id="statWeek" class="stat-value text-info">—</div>
+          <div class="stat-hint">click to view &rarr;</div>
         </div>
       </div>
     </div>
@@ -110,6 +117,17 @@
   </div>
 
 </div><!-- /dashboardView -->
+
+<!-- ══════════════════════════════════════════════ FILTERED VIEW ═══ -->
+<div id="filteredView" class="d-none container-fluid px-4 py-4">
+  <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+    <button class="btn btn-sm btn-outline-secondary" onclick="showDashboard()">
+      <i class="fa-solid fa-arrow-left me-1"></i>Dashboard
+    </button>
+    <h4 id="filteredViewTitle" class="mb-0 fw-bold flex-grow-1 min-w-0"></h4>
+  </div>
+  <div id="filteredViewBody"></div>
+</div><!-- /filteredView -->
 
 <!-- ════════════════════════════════════════ TRANSACTION DETAIL VIEW ═══ -->
 <div id="transactionView" class="d-none container-fluid px-4 py-4">
@@ -282,7 +300,7 @@
             <label class="form-label">Earnest Money</label>
             <div class="input-group">
               <span class="input-group-text">$</span>
-              <input type="number" id="txEarnestMoney" class="form-control" placeholder="10000" />
+              <input type="number" id="txEarnest" class="form-control" placeholder="10000" />
             </div>
           </div>
 
@@ -463,6 +481,7 @@
       </div>
       <div class="modal-body">
         <input type="hidden" id="dlId" />
+        <input type="hidden" id="dlTransactionId" />
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label">Title <span class="text-danger">*</span></label>
