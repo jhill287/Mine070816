@@ -25,7 +25,7 @@ body {
 
 /* ─── Navbar ────────────────────────────────────────────────── */
 .navbar {
-  background: var(--navy);
+  background: var(--navy) !important;
   border-bottom: 3px solid var(--gold);
   box-shadow: 0 2px 8px rgba(0,0,0,.25);
 }
@@ -73,6 +73,7 @@ body {
   font-size: .8rem;
   text-transform: uppercase;
   letter-spacing: .06em;
+  font-variant: small-caps;
   font-weight: 700;
 }
 
@@ -155,6 +156,7 @@ body {
   font-size: .72rem;
   text-transform: uppercase;
   letter-spacing: .05em;
+  font-variant: small-caps;
   color: var(--text-muted);
   font-weight: 600;
   margin-bottom: 2px;
@@ -167,6 +169,7 @@ body {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .06em;
+  font-variant: small-caps;
   color: var(--text-muted);
   margin-bottom: .5rem;
   padding: 0 .25rem;
@@ -188,16 +191,21 @@ body {
 .dl-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
 
 .dl-overdue {
-  border-left: 4px solid #dc3545;
+  border-left: 4px solid #dc3545 !important;
   background: #fff8f8;
 }
 .dl-today {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid #f59e0b !important;
   background: #fffbeb;
 }
 .dl-done {
   opacity: .72;
   background: #f8fafc;
+  border-left: 4px solid #22c55e !important;
+}
+.dl-done .dl-title {
+  text-decoration: line-through;
+  color: #94a3b8;
 }
 
 .dl-left {
@@ -238,18 +246,18 @@ body {
 
 /* ─── Category icons ───────────────────────────────────────── */
 .cat-icon { font-size: .95rem; margin-top: 2px; flex-shrink: 0; }
-.cat-money     { color: #16a34a; }
-.cat-inspect   { color: #7c3aed; }
-.cat-finance   { color: #1d4ed8; }
-.cat-appraisal { color: #0891b2; }
-.cat-title     { color: #b45309; }
-.cat-hoa       { color: #9333ea; }
-.cat-survey    { color: #0f766e; }
-.cat-insurance { color: #2563eb; }
-.cat-walk      { color: #059669; }
-.cat-closing   { color: #dc2626; }
-.cat-disclosure{ color: #d97706; }
-.cat-custom    { color: #94a3b8; }
+.cat-money      { color: #16a34a; }
+.cat-inspect    { color: #7c3aed; }
+.cat-finance    { color: #1d4ed8; }
+.cat-appraisal  { color: #0891b2; }
+.cat-title      { color: #b45309; }
+.cat-hoa        { color: #9333ea; }
+.cat-survey     { color: #0f766e; }
+.cat-insurance  { color: #2563eb; }
+.cat-walk       { color: #059669; }
+.cat-closing    { color: #dc2626; }
+.cat-disclosure { color: #d97706; }
+.cat-custom     { color: #94a3b8; }
 
 /* ─── Quick action buttons ─────────────────────────────────── */
 .dl-actions {
@@ -264,13 +272,22 @@ body {
   border-radius: 5px;
 }
 
-/* ─── Alert bell ───────────────────────────────────────────── */
+/* ─── Alert bell animation ─────────────────────────────────── */
+@keyframes bell-shake {
+  0%,100% { transform: rotate(0); }
+  15%      { transform: rotate(14deg); }
+  30%      { transform: rotate(-10deg); }
+  45%      { transform: rotate(6deg); }
+  60%      { transform: rotate(-4deg); }
+  75%      { transform: rotate(2deg); }
+}
 .alert-bell {
   cursor: pointer;
   position: relative;
   font-size: 1.1rem;
   color: #fbbf24;
 }
+.alert-bell.ringing { animation: bell-shake .6s ease; }
 .alert-bell .badge {
   position: absolute;
   top: -6px; right: -8px;
@@ -292,8 +309,73 @@ body {
 }
 .empty-state h5 { color: #475569; }
 
+/* ─── CBS Import form ──────────────────────────────────────── */
+.cbs-section-header {
+  background: var(--navy);
+  color: #fff;
+  padding: .45rem 1rem;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  border-radius: 6px 6px 0 0;
+  margin-top: 1rem;
+}
+.cbs-section-header:first-child { margin-top: 0; }
+
+.cbs-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .5rem .75rem;
+  border: 1px solid var(--border);
+  border-top: none;
+  background: #fff;
+}
+.cbs-row:last-child { border-radius: 0 0 6px 6px; }
+.cbs-row:nth-child(even) { background: #f8fafc; }
+
+.cbs-row input[type="checkbox"] { flex-shrink: 0; width: 16px; height: 16px; cursor: pointer; }
+.cbs-row label { flex: 1; font-size: .85rem; margin-bottom: 0; cursor: pointer; line-height: 1.3; }
+.cbs-row .cbs-date-input { width: 145px; flex-shrink: 0; font-size: .83rem; }
+.cbs-side-badge { font-size: .68rem; flex-shrink: 0; width: 45px; text-align: center; }
+
+.cbs-label-title { font-weight: 600; display: block; }
+.cbs-label-desc  { font-size: .78rem; color: var(--text-muted); display: block; }
+
+/* ─── Reports ──────────────────────────────────────────────── */
+.report-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.report-stat-value { font-size: 2rem; font-weight: 700; color: var(--navy); }
+.report-stat-label { font-size: .8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+/* ─── Settings gear (fixed) ────────────────────────────────── */
+#settingsBtn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1030;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--navy);
+  border: 2px solid var(--gold);
+  color: #fff;
+  font-size: 1.1rem;
+  box-shadow: 0 3px 10px rgba(0,0,0,.25);
+  transition: transform .2s, background .2s;
+}
+#settingsBtn:hover { transform: rotate(60deg); background: var(--navy-dark); }
+
 /* ─── Misc helpers ─────────────────────────────────────────── */
 .min-w-0 { min-width: 0; }
+.fw-600  { font-weight: 600; }
+.text-navy { color: var(--navy) !important; }
 
 /* ─── Scrollable modal body ────────────────────────────────── */
 .modal-dialog-scrollable .modal-body {
@@ -310,4 +392,9 @@ body {
   .dl-right { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
   .dl-date-area { text-align: left; }
   .dl-actions { justify-content: flex-start; }
+  .stat-value { font-size: 1.4rem; }
+  .tx-card-header { flex-direction: column; }
+  .cbs-row { flex-wrap: wrap; }
+  .cbs-row .cbs-date-input { width: 100%; }
+  #settingsBtn { bottom: 1rem; right: 1rem; }
 }

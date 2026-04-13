@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RE Deadline Tracker — {{ tx.address }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --navy: #1a3a5c;
+      --gold: #c8a951;
+      --bg: #f4f6f9;
+    }
+    body { background: var(--bg); }
+    .navbar-brand { font-weight: 700; letter-spacing: .02em; }
+    .shared-navbar {
+      background: var(--navy) !important;
+      border-bottom: 3px solid var(--gold);
+    }
+    .shared-label {
+      font-size: .85rem;
+      color: rgba(255,255,255,.7);
+      margin-left: .75rem;
+    }
+    .tx-header-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: .5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .tx-address { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
+    .tx-meta { font-size: .9rem; color: #64748b; }
+    .dl-group-header {
+      font-size: .7rem;
+      font-variant: small-caps;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: #94a3b8;
+      padding: .5rem 0 .25rem;
+      border-bottom: 1px solid #e2e8f0;
+      margin-bottom: .5rem;
+    }
+    .dl-row {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: .375rem;
+      padding: .65rem 1rem;
+      margin-bottom: .4rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .dl-overdue {
+      border-left: 4px solid #dc3545 !important;
+      background: #fff8f8;
+    }
+    .dl-today {
+      border-left: 4px solid #f59e0b !important;
+      background: #fffbeb;
+    }
+    .dl-upcoming {
+      border-left: 4px solid #e2e8f0;
+    }
+    .dl-done {
+      opacity: .72;
+      background: #f8fafc;
+      border-left: 4px solid #22c55e !important;
+    }
+    .dl-done .dl-title { text-decoration: line-through; color: #94a3b8; }
+    .dl-icon { width: 1.75rem; text-align: center; flex-shrink: 0; }
+    .dl-title { font-weight: 600; font-size: .9rem; }
+    .dl-date { font-size: .82rem; color: #64748b; }
+    .cat-money    { color: #16a34a; }
+    .cat-inspect  { color: #7c3aed; }
+    .cat-finance  { color: #2563eb; }
+    .cat-appraisal{ color: #0891b2; }
+    .cat-title    { color: #b45309; }
+    .cat-hoa      { color: #9333ea; }
+    .cat-survey   { color: #0d9488; }
+    .cat-insurance{ color: #1d4ed8; }
+    .cat-walk     { color: #059669; }
+    .cat-closing  { color: #dc2626; }
+    .cat-disclosure{ color: #ea580c; }
+    .cat-custom   { color: #64748b; }
+    footer {
+      margin-top: 3rem;
+      padding: 1rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: .82rem;
+      border-top: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar shared-navbar navbar-dark">
+    <div class="container">
+      <span class="navbar-brand">
+        <i class="fa-solid fa-house me-2"></i>RE Deadline Tracker &mdash; Colorado
+      </span>
+      <span class="shared-label">
+        <i class="fa-solid fa-share-nodes me-1"></i>{{ label }}
+      </span>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+
+    <!-- Transaction Header -->
+    <div class="tx-header-card">
+      <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+        <div>
+          <div class="tx-address">
+            <i class="fa-solid fa-location-dot me-2 text-danger"></i>{{ tx.address }}{% if tx.city %}, {{ tx.city }}{% endif %}{% if tx.state %}, {{ tx.state }}{% endif %}{% if tx.zip_code %} {{ tx.zip_code }}{% endif %}
+          </div>
+          {% if tx.client_name %}
+          <div class="tx-meta mt-1">
+            <i class="fa-solid fa-user me-1"></i>{{ tx.client_name }}
+          </div>
+          {% endif %}
+          <div class="tx-meta mt-1 d-flex flex-wrap gap-3">
+            {% if tx.mec_date %}
+            <span><i class="fa-solid fa-calendar-check me-1 text-primary"></i><strong>MEC:</strong> {{ tx.mec_date }}</span>
+            {% endif %}
+            {% if tx.closing_date %}
+            <span><i class="fa-solid fa-key me-1 text-success"></i><strong>Closing:</strong> {{ tx.closing_date }}</span>
+            {% endif %}
+            {% if tx.purchase_price %}
+            <span><i class="fa-solid fa-dollar-sign me-1 text-success"></i><strong>Price:</strong> ${{ "{:,.0f}".format(tx.purchase_price) }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          {% if tx.status == 'active' %}
+            <span class="badge bg-primary fs-6">Active</span>
+          {% elif tx.status == 'under_contract' %}
+            <span class="badge bg-success fs-6">Under Contract</span>
+          {% elif tx.status == 'closed' %}
+            <span class="badge bg-secondary fs-6">Closed</span>
+          {% elif tx.status == 'fallen_through' %}
+            <span class="badge bg-danger fs-6">Fallen Through</span>
+          {% else %}
+            <span class="badge bg-warning text-dark fs-6">{{ tx.status | capitalize }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Deadlines -->
+    {% set today_str = today if today is defined else '' %}
+
+    {# Group deadlines into buckets #}
+    {% set overdue_list = [] %}
+    {% set today_list   = [] %}
+    {% set upcoming_list= [] %}
+    {% set done_list    = [] %}
+
+    {% for d in tx.deadlines %}
+      {% if d.status == 'completed' or d.status == 'waived' %}
+        {% set _ = done_list.append(d) %}
+      {% elif d.due_date < (namespace(v='')).v %}
+        {% set _ = overdue_list.append(d) %}
+      {% else %}
+        {# We'll sort at render time; just put all pending together first #}
+        {% set _ = upcoming_list.append(d) %}
+      {% endif %}
+    {% endfor %}
+
+    {# Re-bucket using a simpler approach compatible with Jinja2 #}
+    <div id="deadlineGroups">
+
+      {# Overdue group — due_date < today AND pending #}
+      {% set ns = namespace(has_overdue=false, has_today=false, has_upcoming=false, has_done=false) %}
+      {% for d in tx.deadlines %}
+        {% if d.status not in ('completed', 'waived') and d.due_date < tx.mec_date %}
+          {% set ns.has_overdue = true %}
+        {% endif %}
+      {% endfor %}
+
+      {# Render all pending deadlines sorted, grouped by bucket #}
+      {% set pending = tx.deadlines | selectattr('status', 'equalto', 'pending') | list %}
+      {% set completed = tx.deadlines | selectattr('status', 'in', ['completed', 'waived']) | list %}
+
+      {# Get today string from python side via a trick — use mec_date as reference only for display #}
+      {# We'll render all pending and let CSS classes indicate urgency based on dates #}
+
+      {% if tx.deadlines | length == 0 %}
+        <div class="text-center py-5 text-muted">
+          <i class="fa-solid fa-calendar-xmark fa-3x mb-3"></i>
+          <p>No deadlines on this transaction.</p>
+        </div>
+      {% else %}
+
+        {# Pending deadlines #}
+        {% set pend = [] %}
+        {% for d in tx.deadlines %}
+          {% if d.status not in ('completed', 'waived') %}
+            {% set _ = pend.append(d) %}
+          {% endif %}
+        {% endfor %}
+
+        {% if pend | length > 0 %}
+        <div class="dl-group-header">
+          <i class="fa-solid fa-clock me-1"></i>Pending Deadlines ({{ pend | length }})
+        </div>
+        {% for d in pend | sort(attribute='due_date') %}
+          <div class="dl-row dl-upcoming">
+            <div class="dl-icon">
+              {% if d.category == 'inspection' %}
+                <i class="fa-solid fa-magnifying-glass cat-inspect"></i>
+              {% elif d.category == 'financing' %}
+                <i class="fa-solid fa-landmark cat-finance"></i>
+              {% elif d.category == 'appraisal' %}
+                <i class="fa-solid fa-chart-bar cat-appraisal"></i>
+              {% elif d.category == 'title' %}
+                <i class="fa-solid fa-file-contract cat-title"></i>
+              {% elif d.category == 'hoa' %}
+                <i class="fa-solid fa-building cat-hoa"></i>
+              {% elif d.category == 'survey' %}
+                <i class="fa-solid fa-map cat-survey"></i>
+              {% elif d.category == 'insurance' %}
+                <i class="fa-solid fa-shield-halved cat-insurance"></i>
+              {% elif d.category == 'closing' %}
+                <i class="fa-solid fa-key cat-closing"></i>
+              {% elif d.category == 'disclosure' %}
+                <i class="fa-solid fa-file-lines cat-disclosure"></i>
+              {% elif d.category == 'earnest_money' %}
+                <i class="fa-solid fa-money-bill cat-money"></i>
+              {% else %}
+                <i class="fa-solid fa-circle-dot cat-custom"></i>
+              {% endif %}
+            </div>
+            <div class="flex-grow-1">
+              <div class="dl-title">{{ d.title }}</div>
+              {% if d.description %}
+              <div class="dl-date">{{ d.description }}</div>
+              {% endif %}
+            </div>
+            <div class="text-end">
+              <div class="dl-date">{{ d.due_date }}</div>
+              <span class="badge bg-secondary">Pending</span>
+            </div>
+          </div>
+        {% endfor %}
+        {% endif %}
+
+        {# Completed deadlines #}
+        {% set done = [] %}
+        {% for d in tx.deadlines %}
+          {% if d.status in ('completed', 'waived') %}
+            {% set _ = done.append(d) %}
+          {% endif %}
+        {% endfor %}
+
+        {% if done | length > 0 %}
+        <div class="dl-group-header mt-3">
+          <i class="fa-solid fa-circle-check me-1"></i>Completed ({{ done | length }})
+        </div>
+        {% for d in done | sort(attribute='due_date') %}
+          <div class="dl-row dl-done">
+            <div class="dl-icon">
+              <i class="fa-solid fa-circle-check text-success"></i>
+            </div>
+            <div class="flex-grow-1">
+              <div class="dl-title">{{ d.title }}</div>
+            </div>
+            <div class="text-end">
+              <div class="dl-date">{{ d.due_date }}</div>
+              <span class="badge bg-success">Done</span>
+            </div>
+          </div>
+        {% endfor %}
+        {% endif %}
+
+      {% endif %}
+    </div>
+
+  </div>
+
+  <footer>
+    <i class="fa-solid fa-lock me-1"></i>This is a read-only shared view.
+    &mdash; RE Deadline Tracker &mdash; Colorado
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
