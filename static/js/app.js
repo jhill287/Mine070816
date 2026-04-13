@@ -353,17 +353,17 @@ function dlRow(d) {
                   :              `<span class="text-muted">${formatDate(d.due_date)}</span>`;
 
   const quickBtns = isPending ? `
-    <button class="btn btn-xs btn-success" onclick="quickStatus(${d.id},'completed')" title="Mark complete">
-      <i class="fa-solid fa-check"></i>
+    <button class="btn btn-xs btn-success" onclick="quickStatus(${d.id},'completed')" title="Mark as completed">
+      <i class="fa-solid fa-check me-1"></i>Complete
     </button>
-    <button class="btn btn-xs btn-secondary" onclick="quickStatus(${d.id},'waived')" title="Mark waived">
-      <i class="fa-solid fa-ban"></i>
+    <button class="btn btn-xs btn-secondary" onclick="quickStatus(${d.id},'waived')" title="Mark as waived — deadline removed by agreement">
+      <i class="fa-solid fa-ban me-1"></i>Waive
     </button>
-    <button class="btn btn-xs btn-warning text-dark" onclick="quickStatus(${d.id},'expired')" title="Mark expired">
-      <i class="fa-solid fa-hourglass-end"></i>
+    <button class="btn btn-xs btn-warning text-dark" onclick="quickStatus(${d.id},'expired')" title="Mark as expired — deadline passed without action">
+      <i class="fa-solid fa-hourglass-end me-1"></i>Expire
     </button>` : `
-    <button class="btn btn-xs btn-outline-secondary" onclick="quickStatus(${d.id},'pending')" title="Reopen">
-      <i class="fa-solid fa-rotate-left"></i>
+    <button class="btn btn-xs btn-outline-secondary" onclick="quickStatus(${d.id},'pending')" title="Reopen — move back to pending">
+      <i class="fa-solid fa-rotate-left me-1"></i>Reopen
     </button>`;
 
   return `
@@ -386,11 +386,11 @@ function dlRow(d) {
       </div>
       <div class="dl-actions">
         ${quickBtns}
-        <button class="btn btn-xs btn-outline-secondary" onclick="openDeadlineModal(${d.id})" title="Edit">
-          <i class="fa-solid fa-pen"></i>
+        <button class="btn btn-xs btn-outline-secondary" onclick="openDeadlineModal(${d.id})" title="Edit this deadline">
+          <i class="fa-solid fa-pen me-1"></i>Edit
         </button>
-        <button class="btn btn-xs btn-outline-danger" onclick="confirmDeleteDeadline(${d.id})" title="Delete">
-          <i class="fa-solid fa-trash"></i>
+        <button class="btn btn-xs btn-outline-danger" onclick="confirmDeleteDeadline(${d.id})" title="Permanently delete this deadline">
+          <i class="fa-solid fa-trash me-1"></i>Delete
         </button>
       </div>
     </div>
